@@ -3,11 +3,14 @@ use anyhow::Result;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Int(String),
+    Int(i64),
     String(String),
     Illegal,
     Eof,
+    Bang,
+    Assign,
     Equal,
+    NotEqual,
     Plus,
     Minus,
     Asterisk,
@@ -20,6 +23,10 @@ pub enum Token {
     RSquirly,
     Function,
     Let,
+    If,
+    While,
+    For,
+    Do,
     Return,
 }
 
@@ -28,6 +35,7 @@ pub struct Lexer {
     read_position: usize,
     ch: u8,
     input: Vec<u8>,
+    curr_token: Token,
 }
 
 impl Lexer {
@@ -37,38 +45,65 @@ impl Lexer {
             read_position: 0,
             ch: 0,
             input: input.into_bytes(),
+            curr_token: Token::Illegal,
         };
+
         lex.read_char();
 
         return lex;
     }
 
-    pub fn next_token(&mut self) -> Result<Token> {
-        self.skip_whitespace();
-
-        let tok = match self.ch {
+    /**
+     * Early returns solves a bug where the lexer would read a char when it shouldn't
+     */
+    fn parse_token(&mut self) -> Result<Token> {
+        let token = match self.ch {
             b'{' => Token::LSquirly,
             b'}' => Token::RSquirly,
             b'(' => Token::Lparen,
             b')' => Token::Rparen,
             b',' => Token::Comma,
             b';' => Token::Semicolon,
-            b'=' => Token::Equal,
+            b'=' => {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::Equal
+                } else {
+                    Token::Assign
+                }
+            }
             b'+' => Token::Plus,
             b'-' => Token::Minus,
             b'*' => Token::Asterisk,
             b'/' => Token::Slash,
+            b'!' => {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::NotEqual
+                } else {
+                    Token::Bang
+                }
+            }
             b'"' => {
+                // dont know if ideal at all lmao
                 self.read_char(); // skip the first "
 
                 let string = self.read_delimiter(b'"');
+
+                self.read_char(); // skip the last "
+
                 return Ok(Token::String(string));
             }
             b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
                 let ident = self.read_ident();
+
                 return Ok(match ident.as_str() {
                     "function" => Token::Function,
                     "let" => Token::Let,
+                    "if" => Token::If,
+                    "while" => Token::While,
+                    "for" => Token::For,
+                    "do" => Token::Do,
                     "return" => Token::Return,
                     _ => Token::Ident(ident),
                 });
@@ -79,7 +114,44 @@ impl Lexer {
         };
 
         self.read_char();
-        return Ok(tok);
+
+        return Ok(token);
+    }
+
+    pub fn next_token(&mut self) -> Result<Token> {
+        self.skip_whitespace();
+
+        let token = self.parse_token()?;
+        self.curr_token = token.clone();
+
+        return Ok(token);
+    }
+
+    pub fn peek_char(&self) -> u8 {
+        if self.position + 1 >= self.input.len() {
+            return 0;
+        } else {
+            return self.input[self.position + 1];
+        }
+    }
+
+    pub fn peek_token(&mut self) -> Result<Token> {
+        let pos = self.position;
+        let read_pos = self.read_position;
+        let ch = self.ch;
+        let current_token = self.curr_token.clone();
+
+        let token = self.next_token()?;
+        self.position = pos;
+        self.read_position = read_pos;
+        self.ch = ch;
+        self.curr_token = current_token;
+
+        Ok(token)
+    }
+
+    pub fn curr_token(&self) -> Token {
+        return self.curr_token.clone();
     }
 
     fn read_char(&mut self) {
@@ -101,6 +173,7 @@ impl Lexer {
 
     fn read_ident(&mut self) -> String {
         let pos = self.position;
+
         while self.ch.is_ascii_alphabetic() || self.ch == b'_' {
             self.read_char();
         }
@@ -115,18 +188,19 @@ impl Lexer {
             self.read_char();
         }
 
-        self.read_char(); // skip the last delimiter
-
-        return String::from_utf8_lossy(&self.input[pos..self.position - 1]).to_string();
+        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
     }
 
-    fn read_int(&mut self) -> String {
+    fn read_int(&mut self) -> i64 {
         let pos = self.position;
+
         while self.ch.is_ascii_digit() {
             self.read_char();
         }
 
-        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
+        return String::from_utf8_lossy(&self.input[pos..self.position])
+            .parse()
+            .expect("failed to parse int");
     }
 }
 
@@ -144,7 +218,7 @@ mod test {
         let tokens = vec![
             Token::Let,
             Token::Ident(String::from("s")),
-            Token::Equal,
+            Token::Assign,
             Token::String(String::from("hello world")),
             Token::Semicolon,
         ];
@@ -159,12 +233,23 @@ mod test {
     }
 
     #[test]
+    fn read_int() -> Result<()> {
+        let input = r#"123;"#;
+        let mut lex = Lexer::new(input.into());
+
+        assert_eq!(lex.next_token()?, Token::Int(123));
+        assert_eq!(lex.next_token()?, Token::Semicolon);
+
+        return Ok(());
+    }
+
+    #[test]
     fn get_next_token() -> Result<()> {
-        let input = "=+(){},;";
+        let input = "=+(){},;!= ==";
         let mut lexer = Lexer::new(input.into());
 
         let tokens = vec![
-            Token::Equal,
+            Token::Assign,
             Token::Plus,
             Token::Lparen,
             Token::Rparen,
@@ -172,12 +257,15 @@ mod test {
             Token::RSquirly,
             Token::Comma,
             Token::Semicolon,
+            Token::NotEqual,
+            Token::Equal,
         ];
 
         for token in tokens {
             let next_token = lexer.next_token()?;
             println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
+            assert_eq!(next_token, lexer.curr_token());
         }
 
         return Ok(());
@@ -191,29 +279,30 @@ mod test {
             let add = function(x, y) {
                 return x + y;
             };
-            let result = add(five, ten);"#;
+            let result = add(five, ten);
+            "#;
 
         let mut lex = Lexer::new(input.into());
 
         let tokens = vec![
             Token::Let,
             Token::Ident(String::from("five")),
-            Token::Equal,
-            Token::Int(String::from("5")),
+            Token::Assign,
+            Token::Int(5),
             Token::Semicolon,
             Token::Let,
             Token::Ident(String::from("str")),
-            Token::Equal,
+            Token::Assign,
             Token::String(String::from("hello")),
             Token::Semicolon,
             Token::Let,
             Token::Ident(String::from("ten")),
-            Token::Equal,
-            Token::Int(String::from("10")),
+            Token::Assign,
+            Token::Int(10),
             Token::Semicolon,
             Token::Let,
             Token::Ident(String::from("add")),
-            Token::Equal,
+            Token::Assign,
             Token::Function,
             Token::Lparen,
             Token::Ident(String::from("x")),
@@ -230,7 +319,7 @@ mod test {
             Token::Semicolon,
             Token::Let,
             Token::Ident(String::from("result")),
-            Token::Equal,
+            Token::Assign,
             Token::Ident(String::from("add")),
             Token::Lparen,
             Token::Ident(String::from("five")),
@@ -246,6 +335,21 @@ mod test {
             println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
         }
+
+        return Ok(());
+    }
+
+    #[test]
+    fn peek_token() -> Result<()> {
+        let input = "let five = 5;";
+
+        let mut lex = Lexer::new(input.into());
+
+        assert_eq!(Token::Let, lex.peek_token()?);
+        assert_eq!(Token::Illegal, lex.curr_token());
+        assert_eq!(Token::Let, lex.next_token()?);
+        assert_eq!(Token::Ident(String::from("five")), lex.peek_token()?);
+        assert_eq!(Token::Let, lex.curr_token());
 
         return Ok(());
     }
