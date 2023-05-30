@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Ident(String),
     Int(String),
@@ -31,7 +31,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    fn new(input: String) -> Lexer {
+    pub fn new(input: String) -> Lexer {
         let mut lex = Lexer {
             position: 0,
             read_position: 0,
@@ -112,11 +112,12 @@ impl Lexer {
         let pos = self.position;
 
         while self.ch != delimiter {
-            println!("{}", self.ch as char);
             self.read_char();
         }
 
-        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
+        self.read_char(); // skip the last delimiter
+
+        return String::from_utf8_lossy(&self.input[pos..self.position - 1]).to_string();
     }
 
     fn read_int(&mut self) -> String {
@@ -137,11 +138,22 @@ mod test {
 
     #[test]
     fn read_delimiter() -> Result<()> {
-        let input = r#""hello world""#;
-        let mut lexer = Lexer::new(input.into());
+        let input = r#"let s = "hello world";"#;
+        let mut lex = Lexer::new(input.into());
 
-        let tok = lexer.next_token()?;
-        assert_eq!(tok, Token::String(String::from("hello world")));
+        let tokens = vec![
+            Token::Let,
+            Token::Ident(String::from("s")),
+            Token::Equal,
+            Token::String(String::from("hello world")),
+            Token::Semicolon,
+        ];
+
+        for token in tokens {
+            let next_token = lex.next_token()?;
+            println!("expected: {:?}, received {:?}", token, next_token);
+            assert_eq!(token, next_token);
+        }
 
         return Ok(());
     }
@@ -174,7 +186,7 @@ mod test {
     #[test]
     fn get_next_complete() -> Result<()> {
         let input = r#"let five = 5;
-						let str = "hello";
+			let str = "hello";
             let ten = 10;
             let add = function(x, y) {
                 return x + y;
