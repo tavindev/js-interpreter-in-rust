@@ -1,6 +1,6 @@
 use super::{operator::Operator, value::Value};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Value),
     Operator {

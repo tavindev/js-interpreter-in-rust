@@ -6,7 +6,7 @@ use crate::{
 use super::{
     expression::Expression,
     ident::Ident,
-    statements::{r#if::IfStatement, r#let::LetStatement, statement::Statement},
+    statements::{r#let::LetStatement, statement::Statement},
     value::Value,
 };
 
@@ -27,7 +27,7 @@ impl Parser {
         return parser;
     }
 
-    fn parse(&mut self) {
+    pub fn parse(&mut self) -> Vec<Statement> {
         while let Ok(token) = self.lexer.next_token() {
             let mut statement = Option::None;
 
@@ -42,6 +42,8 @@ impl Parser {
                 self.statements.push(statement);
             }
         }
+
+        return self.statements.clone();
     }
 
     fn parse_ident(&mut self) -> Ident {
@@ -80,6 +82,7 @@ impl Parser {
         return Expression::Literal(match self.lexer.curr_token() {
             Token::Int(int) => Value::Int(int),
             Token::String(string) => Value::String(string),
+            Token::Ident(ident) => Value::Ident(ident),
             t => panic!("Expected an int or string, got {:?}", t),
         });
     }
@@ -87,11 +90,13 @@ impl Parser {
     fn parse_expression(&mut self) -> Expression {
         if let Ok(token) = self.lexer.next_token() {
             match token {
-                Token::Int(_) | Token::String(_) => {
+                Token::Int(_) | Token::String(_) | Token::Ident(_) => {
                     if let Ok(next_token) = self.lexer.peek_token() {
                         return match next_token {
                             Token::Plus | Token::Minus => self.parse_operator_expression(),
-                            Token::Semicolon => self.parse_literal_expression(),
+                            Token::Semicolon | Token::Eof | Token::Newline => {
+                                self.parse_literal_expression()
+                            }
                             _ => panic!("Expected an operator or value, got {:?}", next_token),
                         };
                     } else {
@@ -106,7 +111,7 @@ impl Parser {
     }
 
     fn parse_if_statement(&mut self) -> Statement {
-        return Statement::If(IfStatement {});
+        todo!("Implement if statement")
     }
 
     fn parse_let_statement(&mut self) -> Statement {
@@ -143,8 +148,6 @@ mod test {
         if let Statement::Let(statement) = &parser.statements[0] {
             assert_eq!(statement.name.0, "x");
             assert_eq!(statement.expression, Expression::Literal(Value::Int(3)));
-        } else {
-            panic!("Expected a let statement");
         }
     }
 
@@ -165,8 +168,6 @@ mod test {
                     right: Box::new(Expression::Literal(Value::Int(4))),
                 }
             );
-        } else {
-            panic!("Expected a let statement");
         }
     }
 
@@ -191,8 +192,42 @@ mod test {
                     }),
                 }
             );
-        } else {
-            panic!("Expected a let statement");
+        }
+    }
+
+    #[test]
+    fn parse_let_statement_ident_expression() {
+        let input = "let x = y;";
+        let parser = Parser::new(input.into());
+
+        assert_eq!(parser.statements.len(), 1);
+
+        if let Statement::Let(statement) = &parser.statements[0] {
+            assert_eq!(statement.name.0, "x");
+            assert_eq!(
+                statement.expression,
+                Expression::Literal(Value::Ident("y".into()))
+            );
+        }
+    }
+
+    #[test]
+    fn parse_let_statement_ident_sum() {
+        let input = "let x = y + z;";
+        let parser = Parser::new(input.into());
+
+        assert_eq!(parser.statements.len(), 1);
+
+        if let Statement::Let(statement) = &parser.statements[0] {
+            assert_eq!(statement.name.0, "x");
+            assert_eq!(
+                statement.expression,
+                Expression::Operator {
+                    left: Box::new(Expression::Literal(Value::Ident("y".into()))),
+                    operator: Operator::Plus,
+                    right: Box::new(Expression::Literal(Value::Ident("z".into()))),
+                }
+            );
         }
     }
 }
