@@ -1,8 +1,4 @@
-use crate::parser::parser::Parser;
-
-pub mod interpreter;
-pub mod lexer;
-pub mod parser;
+use js_interpreter_in_rust::parser::parser::Parser;
 
 pub fn main() {
     let io = std::io::stdin();
