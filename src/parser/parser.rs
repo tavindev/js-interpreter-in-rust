@@ -80,7 +80,7 @@ impl Parser {
 
     fn parse_literal_expression(&mut self) -> Expression {
         return Expression::Literal(match self.lexer.curr_token() {
-            Token::Int(int) => Value::Int(int),
+            Token::Int(int) => Value::Int(int.parse().expect("Expected an integer")),
             Token::String(string) => Value::String(string),
             Token::Ident(ident) => Value::Ident(ident),
             t => panic!("Expected an int or string, got {:?}", t),

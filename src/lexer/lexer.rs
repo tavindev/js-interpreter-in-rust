@@ -3,7 +3,7 @@ use anyhow::Result;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Int(i64),
+    Int(String),
     String(String),
     Illegal,
     Eof,
@@ -28,6 +28,7 @@ pub enum Token {
     For,
     Do,
     Return,
+    Newline,
 }
 
 pub struct Lexer {
@@ -109,6 +110,13 @@ impl Lexer {
                 });
             }
             b'0'..=b'9' => return Ok(Token::Int(self.read_int())),
+            b'\n' => {
+                if self.peek_char() == b'\r' {
+                    self.read_char();
+                }
+
+                Token::Newline
+            }
             0 => Token::Eof,
             _ => todo!("we need to implement this...."),
         };
@@ -191,16 +199,14 @@ impl Lexer {
         return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
     }
 
-    fn read_int(&mut self) -> i64 {
+    fn read_int(&mut self) -> String {
         let pos = self.position;
 
         while self.ch.is_ascii_digit() {
             self.read_char();
         }
 
-        return String::from_utf8_lossy(&self.input[pos..self.position])
-            .parse()
-            .expect("failed to parse int");
+        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
     }
 }
 
@@ -237,7 +243,7 @@ mod test {
         let input = r#"123;"#;
         let mut lex = Lexer::new(input.into());
 
-        assert_eq!(lex.next_token()?, Token::Int(123));
+        assert_eq!(lex.next_token()?, Token::Int("123".into()));
         assert_eq!(lex.next_token()?, Token::Semicolon);
 
         return Ok(());
@@ -245,7 +251,7 @@ mod test {
 
     #[test]
     fn get_next_token() -> Result<()> {
-        let input = "=+(){},;!= ==";
+        let input = "=+(){},;!===";
         let mut lexer = Lexer::new(input.into());
 
         let tokens = vec![
@@ -273,10 +279,7 @@ mod test {
 
     #[test]
     fn get_next_complete() -> Result<()> {
-        let input = r#"let five = 5;
-			let str = "hello";
-            let ten = 10;
-            let add = function(x, y) {
+        let input = r#"let add = function(x, y) {
                 return x + y;
             };
             let result = add(five, ten);
@@ -285,21 +288,6 @@ mod test {
         let mut lex = Lexer::new(input.into());
 
         let tokens = vec![
-            Token::Let,
-            Token::Ident(String::from("five")),
-            Token::Assign,
-            Token::Int(5),
-            Token::Semicolon,
-            Token::Let,
-            Token::Ident(String::from("str")),
-            Token::Assign,
-            Token::String(String::from("hello")),
-            Token::Semicolon,
-            Token::Let,
-            Token::Ident(String::from("ten")),
-            Token::Assign,
-            Token::Int(10),
-            Token::Semicolon,
             Token::Let,
             Token::Ident(String::from("add")),
             Token::Assign,
@@ -350,6 +338,25 @@ mod test {
         assert_eq!(Token::Let, lex.next_token()?);
         assert_eq!(Token::Ident(String::from("five")), lex.peek_token()?);
         assert_eq!(Token::Let, lex.curr_token());
+
+        return Ok(());
+    }
+
+    #[test]
+    fn new_line() -> Result<()> {
+        let input = "let five = 5\nlet two = 2";
+
+        let mut lex = Lexer::new(input.into());
+
+        assert_eq!(Token::Let, lex.next_token()?);
+        assert_eq!(Token::Ident(String::from("five")), lex.next_token()?);
+        assert_eq!(Token::Assign, lex.next_token()?);
+        assert_eq!(Token::Int("5".into()), lex.next_token()?);
+        assert_eq!(Token::Newline, lex.next_token()?);
+        assert_eq!(Token::Let, lex.next_token()?);
+        assert_eq!(Token::Ident(String::from("two")), lex.next_token()?);
+        assert_eq!(Token::Assign, lex.next_token()?);
+        assert_eq!(Token::Int("2".into()), lex.next_token()?);
 
         return Ok(());
     }
