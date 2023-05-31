@@ -2,7 +2,7 @@ use super::operator::Operator;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
-    Int(String),
+    Number(String),
     String(String),
     Ident(String),
     Bool(String),

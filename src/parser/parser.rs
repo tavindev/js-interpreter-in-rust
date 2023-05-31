@@ -54,7 +54,7 @@ impl Parser {
 
     fn parse_token_to_value(&mut self, token: Token) -> Value {
         match token {
-            Token::Int(int) => Value::Int(int),
+            Token::Number(int) => Value::Number(int),
             Token::String(string) => Value::String(string),
             Token::Ident(ident) => Value::Ident(ident),
             Token::True => Value::Bool("true".into()),
@@ -102,7 +102,7 @@ impl Parser {
 
     fn parse_expression(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Int(_) | Token::String(_) | Token::Ident(_) | Token::True | Token::False => {
+            Token::Number(_) | Token::String(_) | Token::Ident(_) | Token::True | Token::False => {
                 match self.lexer.peek_token() {
                     Token::Plus
                     | Token::Minus
@@ -215,7 +215,7 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Int("3".into()))),
+                    left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Equal,
                     right: Box::new(Expression::Literal(Value::Ident("y".into()))),
                 }
@@ -257,7 +257,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Literal(Value::Int("3".into()))
+                Expression::Literal(Value::Number("3".into()))
             );
         }
     }
@@ -274,9 +274,9 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Int("3".into()))),
+                    left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Int("4".into()))),
+                    right: Box::new(Expression::Literal(Value::Number("4".into()))),
                 }
             );
         }
@@ -294,12 +294,12 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Int("3".into()))),
+                    left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Minus,
                     right: Box::new(Expression::Operator {
-                        right: Box::new(Expression::Literal(Value::Int("1".into()))),
+                        right: Box::new(Expression::Literal(Value::Number("1".into()))),
                         operator: Operator::Plus,
-                        left: Box::new(Expression::Literal(Value::Int("4".into()))),
+                        left: Box::new(Expression::Literal(Value::Number("4".into()))),
                     }),
                 }
             );
@@ -367,7 +367,7 @@ mod test {
                 assert_eq!(let_statement.name.0, "x");
                 assert_eq!(
                     let_statement.expression,
-                    Expression::Literal(Value::Int("3".into()))
+                    Expression::Literal(Value::Number("3".into()))
                 );
             }
         }
@@ -386,7 +386,7 @@ mod test {
         if let Statement::If(statement) = &parser.statements[0] {
             assert_eq!(
                 statement.condition,
-                Expression::Literal(Value::Int("3".into()))
+                Expression::Literal(Value::Number("3".into()))
             );
             assert_eq!(statement.consequence.0.len(), 0);
         }
@@ -402,7 +402,7 @@ mod test {
         if let Statement::If(statement) = &parser.statements[0] {
             assert_eq!(
                 statement.condition,
-                Expression::Literal(Value::Int("3".into()))
+                Expression::Literal(Value::Number("3".into()))
             );
             assert_eq!(statement.consequence.0.len(), 1);
 
@@ -410,7 +410,7 @@ mod test {
                 assert_eq!(let_statement.name.0, "x");
                 assert_eq!(
                     let_statement.expression,
-                    Expression::Literal(Value::Int("3".into()))
+                    Expression::Literal(Value::Number("3".into()))
                 );
             }
 
@@ -428,7 +428,7 @@ mod test {
         if let Statement::If(statement) = &parser.statements[0] {
             assert_eq!(
                 statement.condition,
-                Expression::Literal(Value::Int("3".into()))
+                Expression::Literal(Value::Number("3".into()))
             );
             assert_eq!(statement.consequence.0.len(), 1);
 
@@ -436,7 +436,7 @@ mod test {
                 assert_eq!(let_statement.name.0, "x");
                 assert_eq!(
                     let_statement.expression,
-                    Expression::Literal(Value::Int("3".into()))
+                    Expression::Literal(Value::Number("3".into()))
                 );
             }
 
@@ -449,7 +449,7 @@ mod test {
                     assert_eq!(let_statement.name.0, "y");
                     assert_eq!(
                         let_statement.expression,
-                        Expression::Literal(Value::Int("4".into()))
+                        Expression::Literal(Value::Number("4".into()))
                     );
                 }
             }

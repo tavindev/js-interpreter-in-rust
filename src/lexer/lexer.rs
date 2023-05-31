@@ -1,7 +1,7 @@
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Int(String),
+    Number(String),
     String(String),
     Illegal,
     Eof,
@@ -151,7 +151,7 @@ impl Lexer {
                     _ => Token::Ident(ident),
                 };
             }
-            b'0'..=b'9' => return Token::Int(self.read_int()),
+            b'0'..=b'9' | b'.' => return Token::Number(self.read_number()),
             b'\n' => {
                 if self.peek_char() == b'\r' {
                     self.read_char();
@@ -241,10 +241,15 @@ impl Lexer {
         return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
     }
 
-    fn read_int(&mut self) -> String {
+    fn read_number(&mut self) -> String {
         let pos = self.position;
+        let mut has_dot = false;
 
-        while self.ch.is_ascii_digit() {
+        while self.ch.is_ascii_digit() || (self.ch == b'.' && !has_dot) {
+            if self.ch == b'.' {
+                has_dot = true;
+            }
+
             self.read_char();
         }
 
@@ -282,7 +287,7 @@ mod test {
         let input = r#"123;"#;
         let mut lex = Lexer::new(input.into());
 
-        assert_eq!(lex.next_token(), Token::Int("123".into()));
+        assert_eq!(lex.next_token(), Token::Number("123".into()));
         assert_eq!(lex.next_token(), Token::Semicolon);
     }
 
@@ -332,6 +337,9 @@ mod test {
             >=
             &&
             ||
+            .51;
+            1.23;
+            2.3.4;
             "#;
 
         let mut lex = Lexer::new(input.into());
@@ -368,19 +376,19 @@ mod test {
             Token::Minus,
             Token::ForwardSlash,
             Token::Asterisk,
-            Token::Int(String::from("5")),
+            Token::Number(String::from("5")),
             Token::Semicolon,
-            Token::Int(String::from("5")),
+            Token::Number(String::from("5")),
             Token::LessThan,
-            Token::Int(String::from("10")),
+            Token::Number(String::from("10")),
             Token::GreaterThan,
-            Token::Int(String::from("5")),
+            Token::Number(String::from("5")),
             Token::Semicolon,
             Token::If,
             Token::Lparen,
-            Token::Int(String::from("5")),
+            Token::Number(String::from("5")),
             Token::LessThan,
-            Token::Int(String::from("10")),
+            Token::Number(String::from("10")),
             Token::Rparen,
             Token::LSquirly,
             Token::Return,
@@ -393,18 +401,25 @@ mod test {
             Token::False,
             Token::Semicolon,
             Token::RSquirly,
-            Token::Int(String::from("10")),
+            Token::Number(String::from("10")),
             Token::Equal,
-            Token::Int(String::from("10")),
+            Token::Number(String::from("10")),
             Token::Semicolon,
-            Token::Int(String::from("10")),
+            Token::Number(String::from("10")),
             Token::NotEqual,
-            Token::Int(String::from("9")),
+            Token::Number(String::from("9")),
             Token::Semicolon,
             Token::LessThanOrEqual,
             Token::GreaterThanOrEqual,
             Token::And,
             Token::Or,
+            Token::Number(String::from(".51")),
+            Token::Semicolon,
+            Token::Number(String::from("1.23")),
+            Token::Semicolon,
+            Token::Number(String::from("2.3")),
+            Token::Number(String::from(".4")),
+            Token::Semicolon,
             Token::Eof,
         ];
 
