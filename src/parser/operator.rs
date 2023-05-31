@@ -2,4 +2,8 @@
 pub enum Operator {
     Plus,
     Minus,
+    Asterisk,
+    Slash,
+    Equal,
+    NotEqual,
 }
