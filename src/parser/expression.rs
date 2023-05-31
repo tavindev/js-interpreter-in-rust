@@ -1,8 +1,10 @@
-use super::{operator::Operator, value::Value};
+use crate::lexer::lexer::Token;
+
+use super::operator::Operator;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Literal(Value),
+    Literal(Token),
     Operator {
         left: Box<Expression>,
         operator: Operator,

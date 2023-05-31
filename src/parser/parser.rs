@@ -7,7 +7,6 @@ use super::{
     expression::Expression,
     ident::Ident,
     statements::{r#let::LetStatement, statement::Statement},
-    value::Value,
 };
 
 pub struct Parser {
@@ -79,12 +78,12 @@ impl Parser {
     }
 
     fn parse_literal_expression(&mut self) -> Expression {
-        return Expression::Literal(match self.lexer.curr_token() {
-            Token::Int(int) => Value::Int(int.parse().expect("Expected an integer")),
-            Token::String(string) => Value::String(string),
-            Token::Ident(ident) => Value::Ident(ident),
+        let token = self.lexer.curr_token();
+
+        match token {
+            Token::Int(_) | Token::String(_) | Token::Ident(_) => Expression::Literal(token),
             t => panic!("Expected an int or string, got {:?}", t),
-        });
+        }
     }
 
     fn parse_expression(&mut self) -> Expression {
@@ -147,7 +146,10 @@ mod test {
 
         if let Statement::Let(statement) = &parser.statements[0] {
             assert_eq!(statement.name.0, "x");
-            assert_eq!(statement.expression, Expression::Literal(Value::Int(3)));
+            assert_eq!(
+                statement.expression,
+                Expression::Literal(Token::Int("3".into()))
+            );
         }
     }
 
@@ -163,9 +165,9 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Int(3))),
+                    left: Box::new(Expression::Literal(Token::Int("3".into()))),
                     operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Int(4))),
+                    right: Box::new(Expression::Literal(Token::Int("4".into()))),
                 }
             );
         }
@@ -183,12 +185,12 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Int(3))),
+                    left: Box::new(Expression::Literal(Token::Int("3".into()))),
                     operator: Operator::Minus,
                     right: Box::new(Expression::Operator {
-                        right: Box::new(Expression::Literal(Value::Int(1))),
+                        right: Box::new(Expression::Literal(Token::Int("1".into()))),
                         operator: Operator::Plus,
-                        left: Box::new(Expression::Literal(Value::Int(4))),
+                        left: Box::new(Expression::Literal(Token::Int("4".into()))),
                     }),
                 }
             );
@@ -206,7 +208,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Literal(Value::Ident("y".into()))
+                Expression::Literal(Token::Ident("y".into()))
             );
         }
     }
@@ -223,9 +225,9 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Operator {
-                    left: Box::new(Expression::Literal(Value::Ident("y".into()))),
+                    left: Box::new(Expression::Literal(Token::Ident("y".into()))),
                     operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Ident("z".into()))),
+                    right: Box::new(Expression::Literal(Token::Ident("z".into()))),
                 }
             );
         }
