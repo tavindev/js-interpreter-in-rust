@@ -56,6 +56,15 @@ impl Parser {
         }
     }
 
+    fn parse_token_to_value(&mut self, token: Token) -> Value {
+        return match token {
+            Token::Int(int) => Value::Int(int),
+            Token::String(string) => Value::String(string),
+            Token::Ident(ident) => Value::Ident(ident),
+            t => panic!("Cannot parse {:?} to Value", t),
+        };
+    }
+
     fn parse_operator_expression(&mut self) -> Expression {
         let left = self.parse_literal_expression();
 
@@ -63,7 +72,7 @@ impl Parser {
             Ok(token) => match token {
                 Token::Plus => Operator::Plus,
                 Token::Minus => Operator::Minus,
-                _ => panic!("Expected an operator"),
+                _ => panic!("Expected an operator, got {:?}", token),
             },
             Err(_) => panic!("Error"),
         };
@@ -80,14 +89,7 @@ impl Parser {
     fn parse_literal_expression(&mut self) -> Expression {
         let token = self.lexer.curr_token();
 
-        let value = match token {
-            Token::Int(int) => Value::Int(int),
-            Token::String(string) => Value::String(string),
-            Token::Ident(ident) => Value::Ident(ident),
-            t => panic!("Expected an int or string, got {:?}", t),
-        };
-
-        return Expression::Literal(value);
+        return Expression::Literal(self.parse_token_to_value(token));
     }
 
     fn parse_expression(&mut self) -> Expression {
