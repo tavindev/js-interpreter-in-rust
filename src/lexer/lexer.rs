@@ -151,6 +151,7 @@ impl Lexer {
                     _ => Token::Ident(ident),
                 };
             }
+            // FIX: Reads , as a number literal
             b'0'..=b'9' | b'.' => return Token::Number(self.read_number()),
             b'\n' => {
                 if self.peek_char() == b'\r' {
@@ -160,7 +161,7 @@ impl Lexer {
                 Token::Newline
             }
             0 => Token::Eof,
-            _ => todo!("we need to implement this...."),
+            _ => panic!("Unexpected character: {}", self.ch as char),
         };
 
         self.read_char();

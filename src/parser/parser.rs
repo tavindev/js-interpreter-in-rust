@@ -81,13 +81,13 @@ impl Parser {
         }
     }
 
-    fn parse_operator_expression(&mut self) -> Expression {
+    fn parse_binary_expression(&mut self) -> Expression {
         let left = self.parse_literal_expression();
         let token = self.lexer.next_token();
         let operator = self.parse_token_to_operator(token);
         let right = self.parse_expression();
 
-        return Expression::Operator {
+        return Expression::Binary {
             left: Box::new(left),
             operator,
             right: Box::new(right),
@@ -115,7 +115,7 @@ impl Parser {
                     | Token::LessThan
                     | Token::LessThanOrEqual
                     | Token::GreaterThan
-                    | Token::GreaterThanOrEqual => self.parse_operator_expression(),
+                    | Token::GreaterThanOrEqual => self.parse_binary_expression(),
                     Token::Semicolon
                     | Token::Eof
                     | Token::Newline
@@ -214,7 +214,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Operator {
+                Expression::Binary {
                     left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Equal,
                     right: Box::new(Expression::Literal(Value::Ident("y".into()))),
@@ -234,7 +234,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Operator {
+                Expression::Binary {
                     left: Box::new(Expression::Literal(Value::Bool("true".into()))),
                     operator: Operator::Equal,
                     right: Box::new(Expression::Literal(Value::Bool("false".into()))),
@@ -273,7 +273,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Operator {
+                Expression::Binary {
                     left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Plus,
                     right: Box::new(Expression::Literal(Value::Number("4".into()))),
@@ -293,10 +293,10 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Operator {
+                Expression::Binary {
                     left: Box::new(Expression::Literal(Value::Number("3".into()))),
                     operator: Operator::Minus,
-                    right: Box::new(Expression::Operator {
+                    right: Box::new(Expression::Binary {
                         right: Box::new(Expression::Literal(Value::Number("1".into()))),
                         operator: Operator::Plus,
                         left: Box::new(Expression::Literal(Value::Number("4".into()))),
@@ -333,7 +333,7 @@ mod test {
             assert_eq!(statement.name.0, "x");
             assert_eq!(
                 statement.expression,
-                Expression::Operator {
+                Expression::Binary {
                     left: Box::new(Expression::Literal(Value::Ident("y".into()))),
                     operator: Operator::Plus,
                     right: Box::new(Expression::Literal(Value::Ident("z".into()))),

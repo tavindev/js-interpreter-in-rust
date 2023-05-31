@@ -11,7 +11,7 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Value),
-    Operator {
+    Binary {
         left: Box<Expression>,
         operator: Operator,
         right: Box<Expression>,
