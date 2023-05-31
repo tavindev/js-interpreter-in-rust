@@ -6,4 +6,12 @@ pub enum Operator {
     Slash,
     Equal,
     NotEqual,
+    LogicalAnd,
+    LogicalOr,
+    And,
+    Or,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }

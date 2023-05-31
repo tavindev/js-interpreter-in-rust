@@ -57,6 +57,8 @@ impl Parser {
             Token::Int(int) => Value::Int(int),
             Token::String(string) => Value::String(string),
             Token::Ident(ident) => Value::Ident(ident),
+            Token::True => Value::Bool("true".into()),
+            Token::False => Value::Bool("false".into()),
             t => panic!("Cannot parse {:?} to Value", t),
         }
     }
@@ -66,9 +68,15 @@ impl Parser {
             Token::Plus => Operator::Plus,
             Token::Minus => Operator::Minus,
             Token::Asterisk => Operator::Asterisk,
-            Token::Slash => Operator::Slash,
+            Token::ForwardSlash => Operator::Slash,
             Token::Equal => Operator::Equal,
             Token::NotEqual => Operator::NotEqual,
+            Token::And => Operator::And,
+            Token::Or => Operator::Or,
+            Token::LessThan => Operator::LessThan,
+            Token::LessThanOrEqual => Operator::LessThanOrEqual,
+            Token::GreaterThan => Operator::GreaterThan,
+            Token::GreaterThanOrEqual => Operator::GreaterThanOrEqual,
             token => panic!("Expected an operator, got {:?}", token),
         }
     }
@@ -94,20 +102,28 @@ impl Parser {
 
     fn parse_expression(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Int(_) | Token::String(_) | Token::Ident(_) => match self.lexer.peek_token() {
-                Token::Plus
-                | Token::Minus
-                | Token::Asterisk
-                | Token::Slash
-                | Token::Equal
-                | Token::NotEqual => self.parse_operator_expression(),
-                Token::Semicolon
-                | Token::Eof
-                | Token::Newline
-                | Token::RSquirly
-                | Token::Rparen => self.parse_literal_expression(),
-                next_token => panic!("Expected an operator or value, got {:?}", next_token),
-            },
+            Token::Int(_) | Token::String(_) | Token::Ident(_) | Token::True | Token::False => {
+                match self.lexer.peek_token() {
+                    Token::Plus
+                    | Token::Minus
+                    | Token::Asterisk
+                    | Token::ForwardSlash
+                    | Token::Equal
+                    | Token::NotEqual
+                    | Token::And
+                    | Token::Or
+                    | Token::LessThan
+                    | Token::LessThanOrEqual
+                    | Token::GreaterThan
+                    | Token::GreaterThanOrEqual => self.parse_operator_expression(),
+                    Token::Semicolon
+                    | Token::Eof
+                    | Token::Newline
+                    | Token::RSquirly
+                    | Token::Rparen => self.parse_literal_expression(),
+                    next_token => panic!("Expected an operator or value, got {:?}", next_token),
+                }
+            }
             token => panic!("Expected an expression or value, got {:?}", token),
         }
     }
@@ -202,6 +218,26 @@ mod test {
                     left: Box::new(Expression::Literal(Value::Int("3".into()))),
                     operator: Operator::Equal,
                     right: Box::new(Expression::Literal(Value::Ident("y".into()))),
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn parse_expression_literal_bool() {
+        let input = "let x = true == false;";
+        let parser = Parser::new(input.into());
+
+        assert_eq!(parser.statements.len(), 1);
+
+        if let Statement::Let(statement) = &parser.statements[0] {
+            assert_eq!(statement.name.0, "x");
+            assert_eq!(
+                statement.expression,
+                Expression::Operator {
+                    left: Box::new(Expression::Literal(Value::Bool("true".into()))),
+                    operator: Operator::Equal,
+                    right: Box::new(Expression::Literal(Value::Bool("false".into()))),
                 }
             );
         }

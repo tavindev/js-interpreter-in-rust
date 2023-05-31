@@ -5,6 +5,7 @@ pub enum Value {
     Int(String),
     String(String),
     Ident(String),
+    Bool(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
