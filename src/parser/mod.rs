@@ -1,6 +1,5 @@
+pub mod expression;
+pub mod ident;
+pub mod operator;
 pub mod parser;
-
-mod expression;
-mod ident;
-mod operator;
-mod statements;
+pub mod statements;
