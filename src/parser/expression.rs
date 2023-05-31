@@ -1,10 +1,15 @@
-use crate::lexer::lexer::Token;
-
 use super::operator::Operator;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    Int(String),
+    String(String),
+    Ident(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Literal(Token),
+    Literal(Value),
     Operator {
         left: Box<Expression>,
         operator: Operator,

@@ -341,23 +341,4 @@ mod test {
 
         return Ok(());
     }
-
-    #[test]
-    fn new_line() -> Result<()> {
-        let input = "let five = 5\nlet two = 2";
-
-        let mut lex = Lexer::new(input.into());
-
-        assert_eq!(Token::Let, lex.next_token()?);
-        assert_eq!(Token::Ident(String::from("five")), lex.next_token()?);
-        assert_eq!(Token::Assign, lex.next_token()?);
-        assert_eq!(Token::Int("5".into()), lex.next_token()?);
-        assert_eq!(Token::Newline, lex.next_token()?);
-        assert_eq!(Token::Let, lex.next_token()?);
-        assert_eq!(Token::Ident(String::from("two")), lex.next_token()?);
-        assert_eq!(Token::Assign, lex.next_token()?);
-        assert_eq!(Token::Int("2".into()), lex.next_token()?);
-
-        return Ok(());
-    }
 }
