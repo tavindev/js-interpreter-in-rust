@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Ident(String),
@@ -24,6 +22,7 @@ pub enum Token {
     Function,
     Let,
     If,
+    Else,
     While,
     For,
     Do,
@@ -57,7 +56,7 @@ impl Lexer {
     /**
      * Early returns solves a bug where the lexer would read a char when it shouldn't
      */
-    fn parse_token(&mut self) -> Result<Token> {
+    fn parse_token(&mut self) -> Token {
         let token = match self.ch {
             b'{' => Token::LSquirly,
             b'}' => Token::RSquirly,
@@ -93,23 +92,24 @@ impl Lexer {
 
                 self.read_char(); // skip the last "
 
-                return Ok(Token::String(string));
+                return Token::String(string);
             }
             b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
                 let ident = self.read_ident();
 
-                return Ok(match ident.as_str() {
+                return match ident.as_str() {
                     "function" => Token::Function,
                     "let" => Token::Let,
                     "if" => Token::If,
+                    "else" => Token::Else,
                     "while" => Token::While,
                     "for" => Token::For,
                     "do" => Token::Do,
                     "return" => Token::Return,
                     _ => Token::Ident(ident),
-                });
+                };
             }
-            b'0'..=b'9' => return Ok(Token::Int(self.read_int())),
+            b'0'..=b'9' => return Token::Int(self.read_int()),
             b'\n' => {
                 if self.peek_char() == b'\r' {
                     self.read_char();
@@ -123,16 +123,16 @@ impl Lexer {
 
         self.read_char();
 
-        return Ok(token);
+        return token;
     }
 
-    pub fn next_token(&mut self) -> Result<Token> {
+    pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        let token = self.parse_token()?;
+        let token = self.parse_token();
         self.curr_token = token.clone();
 
-        return Ok(token);
+        return token;
     }
 
     pub fn peek_char(&self) -> u8 {
@@ -143,19 +143,19 @@ impl Lexer {
         }
     }
 
-    pub fn peek_token(&mut self) -> Result<Token> {
+    pub fn peek_token(&mut self) -> Token {
         let pos = self.position;
         let read_pos = self.read_position;
         let ch = self.ch;
         let current_token = self.curr_token.clone();
 
-        let token = self.next_token()?;
+        let token = self.next_token();
         self.position = pos;
         self.read_position = read_pos;
         self.ch = ch;
         self.curr_token = current_token;
 
-        Ok(token)
+        token
     }
 
     pub fn curr_token(&self) -> Token {
@@ -212,12 +212,11 @@ impl Lexer {
 
 #[cfg(test)]
 mod test {
-    use anyhow::Result;
 
     use super::{Lexer, Token};
 
     #[test]
-    fn read_delimiter() -> Result<()> {
+    fn read_delimiter() {
         let input = r#"let s = "hello world";"#;
         let mut lex = Lexer::new(input.into());
 
@@ -230,27 +229,23 @@ mod test {
         ];
 
         for token in tokens {
-            let next_token = lex.next_token()?;
+            let next_token = lex.next_token();
             println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
         }
-
-        return Ok(());
     }
 
     #[test]
-    fn read_int() -> Result<()> {
+    fn read_int() {
         let input = r#"123;"#;
         let mut lex = Lexer::new(input.into());
 
-        assert_eq!(lex.next_token()?, Token::Int("123".into()));
-        assert_eq!(lex.next_token()?, Token::Semicolon);
-
-        return Ok(());
+        assert_eq!(lex.next_token(), Token::Int("123".into()));
+        assert_eq!(lex.next_token(), Token::Semicolon);
     }
 
     #[test]
-    fn get_next_token() -> Result<()> {
+    fn get_next_token() {
         let input = "=+(){},;!===";
         let mut lexer = Lexer::new(input.into());
 
@@ -268,17 +263,15 @@ mod test {
         ];
 
         for token in tokens {
-            let next_token = lexer.next_token()?;
+            let next_token = lexer.next_token();
             println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
             assert_eq!(next_token, lexer.curr_token());
         }
-
-        return Ok(());
     }
 
     #[test]
-    fn get_next_complete() -> Result<()> {
+    fn get_next_complete() {
         let input = r#"let add = function(x, y) {
                 return x + y;
             };
@@ -319,26 +312,22 @@ mod test {
         ];
 
         for token in tokens {
-            let next_token = lex.next_token()?;
+            let next_token = lex.next_token();
             println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
         }
-
-        return Ok(());
     }
 
     #[test]
-    fn peek_token() -> Result<()> {
+    fn peek_token() {
         let input = "let five = 5;";
 
         let mut lex = Lexer::new(input.into());
 
-        assert_eq!(Token::Let, lex.peek_token()?);
+        assert_eq!(Token::Let, lex.peek_token());
         assert_eq!(Token::Illegal, lex.curr_token());
-        assert_eq!(Token::Let, lex.next_token()?);
-        assert_eq!(Token::Ident(String::from("five")), lex.peek_token()?);
+        assert_eq!(Token::Let, lex.next_token());
+        assert_eq!(Token::Ident(String::from("five")), lex.peek_token());
         assert_eq!(Token::Let, lex.curr_token());
-
-        return Ok(());
     }
 }

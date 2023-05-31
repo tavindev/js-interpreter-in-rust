@@ -6,7 +6,9 @@ use crate::{
 use super::{
     expression::{Expression, Value},
     ident::Ident,
-    statements::{r#let::LetStatement, statement::Statement},
+    statements::{
+        block::BlockStatement, r#if::IfStatement, r#let::LetStatement, statement::Statement,
+    },
 };
 
 pub struct Parser {
@@ -27,15 +29,13 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Vec<Statement> {
-        while let Ok(token) = self.lexer.next_token() {
-            let mut statement = Option::None;
-
-            match token {
-                Token::Let => statement = Some(self.parse_let_statement()),
-                Token::If => statement = Some(self.parse_if_statement()),
+        loop {
+            let statement = match self.lexer.next_token() {
+                Token::Let => Some(self.parse_let_statement()),
+                Token::If => Some(self.parse_if_statement()),
                 Token::Eof => break,
-                _ => {}
-            }
+                _ => None,
+            };
 
             if let Some(statement) = statement {
                 self.statements.push(statement);
@@ -46,35 +46,30 @@ impl Parser {
     }
 
     fn parse_ident(&mut self) -> Ident {
-        if let Ok(token) = self.lexer.next_token() {
-            match token {
-                Token::Ident(ident) => return Ident(ident),
-                _ => panic!("Expected an identifier"),
-            }
-        } else {
-            panic!("Error");
+        match self.lexer.next_token() {
+            Token::Ident(ident) => return Ident(ident),
+            _ => panic!("Expected an identifier"),
         }
     }
 
     fn parse_token_to_value(&mut self, token: Token) -> Value {
-        return match token {
+        match token {
             Token::Int(int) => Value::Int(int),
             Token::String(string) => Value::String(string),
             Token::Ident(ident) => Value::Ident(ident),
             t => panic!("Cannot parse {:?} to Value", t),
-        };
+        }
     }
 
     fn parse_operator_expression(&mut self) -> Expression {
         let left = self.parse_literal_expression();
 
         let operator = match self.lexer.next_token() {
-            Ok(token) => match token {
+            token => match token {
                 Token::Plus => Operator::Plus,
                 Token::Minus => Operator::Minus,
                 _ => panic!("Expected an operator, got {:?}", token),
             },
-            Err(_) => panic!("Error"),
         };
 
         let right = self.parse_expression();
@@ -93,46 +88,75 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
-        if let Ok(token) = self.lexer.next_token() {
-            match token {
-                Token::Int(_) | Token::String(_) | Token::Ident(_) => {
-                    if let Ok(next_token) = self.lexer.peek_token() {
-                        return match next_token {
-                            Token::Plus | Token::Minus => self.parse_operator_expression(),
-                            Token::Semicolon | Token::Eof | Token::Newline => {
-                                self.parse_literal_expression()
-                            }
-                            _ => panic!("Expected an operator or value, got {:?}", next_token),
-                        };
-                    } else {
-                        panic!("Error");
-                    }
-                }
-                _ => panic!("Expected an operator or value, got {:?}", token),
-            };
-        } else {
-            panic!("Error");
+        match self.lexer.next_token() {
+            Token::Int(_) | Token::String(_) | Token::Ident(_) => match self.lexer.peek_token() {
+                Token::Plus | Token::Minus => self.parse_operator_expression(),
+                Token::Semicolon | Token::Eof | Token::Newline => self.parse_literal_expression(),
+                next_token => panic!("Expected an operator or value, got {:?}", next_token),
+            },
+            token => panic!("Expected an operator or value, got {:?}", token),
         }
     }
 
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let mut statements = Vec::new();
+
+        match self.lexer.next_token() {
+            Token::LSquirly => loop {
+                match self.lexer.next_token() {
+                    Token::Let => statements.push(self.parse_let_statement()),
+                    Token::If => statements.push(self.parse_if_statement()),
+                    Token::RSquirly => break,
+                    _ => {}
+                }
+            },
+            _ => {
+                panic!("Expected a left brace");
+            }
+        };
+
+        BlockStatement(statements)
+    }
+
     fn parse_if_statement(&mut self) -> Statement {
-        todo!("Implement if statement")
+        let token = self.lexer.next_token();
+
+        if token != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        };
+
+        let condition = self.parse_expression();
+
+        let token = self.lexer.next_token();
+
+        if token != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        }
+
+        let consequence = self.parse_block_statement();
+
+        let alternative = match self.lexer.next_token() {
+            Token::Else => Some(self.parse_block_statement()),
+            _ => None,
+        };
+
+        return Statement::If(IfStatement {
+            condition,
+            consequence,
+            alternative,
+        });
     }
 
     fn parse_let_statement(&mut self) -> Statement {
         let name = self.parse_ident();
 
-        if let Ok(token) = self.lexer.next_token() {
-            match token {
-                Token::Assign => {
-                    let expression = self.parse_expression();
-                    return Statement::Let(LetStatement { name, expression });
-                }
-                // We'll later add other types of assignment operators
-                _ => panic!("Expected an equal sign"),
+        match self.lexer.next_token() {
+            Token::Assign => {
+                let expression = self.parse_expression();
+                return Statement::Let(LetStatement { name, expression });
             }
-        } else {
-            panic!("Error");
+            // We'll later add other types of assignment operators
+            _ => panic!("Expected an equal sign"),
         }
     }
 }
@@ -143,6 +167,9 @@ mod test {
 
     use super::*;
 
+    /**
+     * LET STATEMENT
+     */
     #[test]
     fn parse_let_statement_literal() {
         let input = "let x = 3;";
@@ -236,6 +263,25 @@ mod test {
                     right: Box::new(Expression::Literal(Value::Ident("z".into()))),
                 }
             );
+        }
+    }
+
+    /**
+     * IF STATEMENT
+     */
+    #[test]
+    fn parse_if_statement_literal() {
+        let input = "if (3) {}";
+        let parser = Parser::new(input.into());
+
+        assert_eq!(parser.statements.len(), 1);
+
+        if let Statement::If(statement) = &parser.statements[0] {
+            assert_eq!(
+                statement.condition,
+                Expression::Literal(Value::Int("3".into()))
+            );
+            assert_eq!(statement.consequence.0.len(), 0);
         }
     }
 }
