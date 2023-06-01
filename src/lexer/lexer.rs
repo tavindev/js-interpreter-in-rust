@@ -188,6 +188,16 @@ impl Lexer {
         }
     }
 
+    pub fn match_token_and_consume(&mut self, token: Token) -> bool {
+        if self.peek_token() == token {
+            self.next_token();
+            return true;
+        }
+
+        return false;
+    }
+
+    // dont know how I feel about this method
     pub fn peek_token(&mut self) -> Token {
         let pos = self.position;
         let read_pos = self.read_position;
@@ -207,8 +217,12 @@ impl Lexer {
         return self.curr_token.clone();
     }
 
+    pub fn is_at_end(&self) -> bool {
+        return self.read_position >= self.input.len();
+    }
+
     fn read_char(&mut self) {
-        if self.read_position >= self.input.len() {
+        if self.is_at_end() {
             self.ch = 0;
         } else {
             self.ch = self.input[self.read_position];
@@ -444,5 +458,15 @@ mod test {
         assert_eq!(Token::Let, lex.next_token());
         assert_eq!(Token::Ident(String::from("five")), lex.peek_token());
         assert_eq!(Token::Let, lex.curr_token());
+    }
+
+    #[test]
+    fn match_token() {
+        let input = "let five = 5;";
+
+        let mut lex = Lexer::new(input.into());
+
+        assert_eq!(lex.match_token_and_consume(Token::Let), true);
+        assert_eq!(lex.match_token_and_consume(Token::Let), false);
     }
 }

@@ -3,11 +3,17 @@ use crate::{
     parser::operator::Operator,
 };
 
-use super::{expression::Expression, ident::Ident, value::Value};
+use super::{
+    expression::Expression,
+    ident::Ident,
+    statements::{
+        block::BlockStatement, r#if::IfStatement, r#let::LetStatement, statement::Statement,
+    },
+    value::Value,
+};
 
 pub struct Parser {
     lexer: Lexer,
-    expressions: Vec<Expression>,
 }
 
 /**
@@ -24,23 +30,41 @@ impl Parser {
     pub fn new(input: String) -> Parser {
         Parser {
             lexer: Lexer::new(input),
-            expressions: Vec::new(),
         }
     }
 
-    pub fn parse(&mut self) -> Vec<Expression> {
-        loop {
-            match self.lexer.peek_token() {
-                Token::Eof => break,
-                _ => {
-                    let expr = self.expression();
+    pub fn parse(&mut self) -> Vec<Statement> {
+        let mut statements = Vec::new();
 
-                    self.expressions.push(expr);
-                }
-            }
+        while !self.lexer.is_at_end() {
+            statements.push(self.statement());
         }
 
-        return self.expressions.clone();
+        statements
+    }
+
+    fn statement(&mut self) -> Statement {
+        // repeating, yes, but expression_statement should not consume first token
+        let statement = match self.lexer.peek_token() {
+            Token::Let => {
+                self.lexer.next_token();
+
+                self.let_statement()
+            }
+            Token::If => {
+                self.lexer.next_token();
+
+                self.if_statement()
+            }
+            Token::LSquirly => {
+                self.lexer.next_token();
+
+                self.block_statement()
+            }
+            _ => return self.expression_statement(),
+        };
+
+        return statement;
     }
 
     fn parse_ident(&mut self) -> Ident {
@@ -67,6 +91,83 @@ impl Parser {
             Token::GreaterThanOrEqual => Operator::GreaterThanOrEqual,
             token => panic!("Expected an operator, got {:?}", token),
         }
+    }
+
+    fn let_statement(&mut self) -> Statement {
+        let ident = self.parse_ident();
+
+        let mut expression: Option<Expression> = None;
+
+        if self.lexer.match_token_and_consume(Token::Assign) {
+            expression = Some(self.expression());
+        }
+
+        if self.lexer.next_token() != Token::Semicolon {
+            panic!("Expected a semicolon");
+        }
+
+        return Statement::Let(LetStatement { ident, expression });
+    }
+
+    fn if_statement(&mut self) -> Statement {
+        if self.lexer.next_token() != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        }
+
+        let condition = self.expression();
+
+        if self.lexer.next_token() != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        }
+
+        if self.lexer.next_token() != Token::LSquirly {
+            panic!("Expected a left brace");
+        }
+
+        let consequence = Box::new(self.block_statement());
+
+        let alternative = if self.lexer.match_token_and_consume(Token::Else) {
+            if self.lexer.next_token() != Token::LSquirly {
+                panic!("Expected a left brace");
+            }
+
+            let alternative = Box::new(self.block_statement());
+
+            Some(alternative)
+        } else {
+            None
+        };
+
+        return Statement::If(IfStatement {
+            condition,
+            consequence,
+            alternative,
+        });
+    }
+
+    fn expression_statement(&mut self) -> Statement {
+        let expression = self.expression();
+
+        if self.lexer.next_token() != Token::Semicolon {
+            panic!("Expected a semicolon");
+        }
+
+        return Statement::Expression(expression);
+    }
+
+    fn block_statement(&mut self) -> Statement {
+        let mut statements = Vec::new();
+
+        while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
+            println!("peek_token: {:?}", self.lexer.peek_token());
+            statements.push(self.statement());
+        }
+
+        if self.lexer.next_token() != Token::RSquirly {
+            panic!("Expected a right brace");
+        }
+
+        return Statement::Block(BlockStatement(statements));
     }
 
     /**
@@ -366,4 +467,131 @@ mod tests {
             }
         );
     }
+
+    /**
+     * STATEMENTS
+     */
+    #[test]
+    fn let_statement_uninitialized() {
+        let mut parser = Parser::new(s!("let a;"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::Let(LetStatement {
+                    ident: Ident(s!("a")),
+                    expression: None,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn let_statement_initialized() {
+        let mut parser = Parser::new(s!("let a = 1;"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::Let(LetStatement {
+                    ident: Ident(s!("a")),
+                    expression: Some(Expression::Literal(Value::Number(1.0))),
+                })
+            );
+        }
+    }
+
+    // #[test]
+    // fn return_statement() {
+    //     let mut parser = Parser::new(s!("return 1;"));
+    //     let stmt = parser.statement();
+
+    //     assert_eq!(
+    //         stmt,
+    //         Statement::Return(ReturnStatement {
+    //             expression: Some(Expression::Literal(Value::Number(1.0))),
+    //         })
+    //     );
+    // }
+
+    #[test]
+    fn expression_statement() {
+        let mut parser = Parser::new(s!("1;"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::Expression(Expression::Literal(Value::Number(1.0)))
+            );
+        }
+    }
+
+    #[test]
+    fn block_statement() {
+        let mut parser = Parser::new(s!("{ 1; }"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::Block(BlockStatement(vec![Statement::Expression(
+                    Expression::Literal(Value::Number(1.0))
+                )],))
+            );
+        }
+    }
+
+    #[test]
+    fn empty_block_statement() {
+        let mut parser = Parser::new(s!("{ }"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(stmt, Statement::Block(BlockStatement(vec![],)));
+        }
+    }
+
+    #[test]
+    fn if_statement() {
+        let mut parser = Parser::new(s!("if (true) { 1; }"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::If(IfStatement {
+                    condition: Expression::Literal(Value::Bool(true)),
+                    consequence: Box::new(Statement::Block(BlockStatement(vec![
+                        Statement::Expression(Expression::Literal(Value::Number(1.0)))
+                    ],))),
+                    alternative: None,
+                })
+            );
+        }
+    }
+
+    // #[test]
+    // fn if() {
+    //     let mut parser = Parser::new(s!("if (a) { } else { a = true; }"));
+    //     let stmt = parser.parse();
+
+    //     for stmt in stmt {
+    //         assert_eq!(
+    //             stmt,
+    //             Statement::If(IfStatement {
+    //                 condition: Expression::Literal(Ident(s!("a"))),
+    //                 consequence: Box::new(Statement::Block(BlockStatement(vec![],))),
+    //                 alternative: Some(Box::new(Statement::Block(BlockStatement(vec![
+    //                     Statement::Expression(Expression::Assign {
+    //                         ident: Ident(s!("a")),
+    //                         expression: Box::new(Expression::Literal(Value::Bool(true))),
+    //                     })
+    //                 ],)))),
+    //             })
+    //         );
+    //     }
+    // }
 }

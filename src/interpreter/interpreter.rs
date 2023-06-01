@@ -18,7 +18,7 @@ impl Interpreter {
         let expressions = self.parser.parse();
 
         for expression in expressions.iter().cloned() {
-            println!("{:?}", expression.evaluate());
+            println!("{:?}", expression);
         }
     }
 }

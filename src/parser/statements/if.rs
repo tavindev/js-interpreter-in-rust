@@ -1,10 +1,10 @@
 use crate::parser::expression::Expression;
 
-use super::block::BlockStatement;
+use super::statement::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement {
     pub condition: Expression,
-    pub consequence: BlockStatement,
-    pub alternative: Option<BlockStatement>,
+    pub consequence: Box<Statement>,
+    pub alternative: Option<Box<Statement>>,
 }
