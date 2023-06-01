@@ -1,10 +1,24 @@
-#[derive(Debug, Clone, PartialEq)]
+use core::fmt;
+
+#[derive(Clone, PartialEq)]
 pub enum Value {
     Ident(String), // TODO: Remove this
     Number(f64),
     String(String),
     Bool(bool),
     Null,
+}
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Ident(ident) => write!(f, "{}", ident),
+            Value::Number(number) => write!(f, "{}", number),
+            Value::String(string) => write!(f, "{}", string),
+            Value::Bool(bool) => write!(f, "{}", bool),
+            Value::Null => write!(f, "null"),
+        }
+    }
 }
 
 impl Value {
@@ -87,8 +101,15 @@ impl Value {
         match (self, other) {
             (Value::Number(left), Value::Number(right)) => Value::Bool(left == right),
             (Value::String(left), Value::String(right)) => Value::Bool(left == right),
+            (Value::Bool(left), Value::Bool(right)) => Value::Bool(left == right),
+            (Value::Null, Value::Null) => Value::Bool(true),
+            (Value::Null, _) => Value::Bool(false),
             _ => unimplemented!(),
         }
+    }
+
+    pub fn neq(&self, other: &Value) -> Value {
+        return self.eq(other).not();
     }
 }
 
@@ -226,5 +247,27 @@ mod tests {
             Value::String("bar".to_string()).lte(&Value::String("foo".to_string())),
             Value::Bool(true)
         );
+    }
+
+    #[test]
+    fn test_eq() {
+        assert_eq!(
+            Value::Number(1.0).eq(&Value::Number(2.0)),
+            Value::Bool(false)
+        );
+        assert_eq!(
+            Value::Number(2.0).eq(&Value::Number(1.0)),
+            Value::Bool(false)
+        );
+        assert_eq!(
+            Value::String("foo".to_string()).eq(&Value::String("bar".to_string())),
+            Value::Bool(false)
+        );
+        assert_eq!(
+            Value::String("bar".to_string()).eq(&Value::String("foo".to_string())),
+            Value::Bool(false)
+        );
+        assert_eq!(Value::Null.eq(&Value::Null), Value::Bool(true));
+        assert_eq!(Value::Null.eq(&Value::Number(1.0)), Value::Bool(false));
     }
 }

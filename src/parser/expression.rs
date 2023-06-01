@@ -36,7 +36,7 @@ impl Expression {
                     Operator::LessThan => left.lt(&right),
                     Operator::LessThanOrEqual => left.lte(&right),
                     Operator::Equal => left.eq(&right),
-                    Operator::NotEqual => left.eq(&right).not(),
+                    Operator::NotEqual => left.neq(&right),
                     _ => unimplemented!(),
                 }
             }
