@@ -16,6 +16,16 @@ pub struct Parser {
     statements: Vec<Statement>,
 }
 
+/**
+ * Expression grammar
+ * expression -> equality ;
+ * equality -> comparison ( ( "!=" | "==" ) comparison )* ;
+ * comparison -> term ( ( ">" | ">=" | "<" | ">" ) term )* ;
+ * term -> factor ( ( "-" | "+" ) factor )* ;
+ * factor -> unary ( ( "/" | "*" ) unary )* ;
+ * unary -> ( "!" | "-" ) unary | primary ;
+ * primary -> NUMBER | STRING | "true" | "false" | null | "(" expression ")" ;
+ */
 impl Parser {
     pub fn new(input: String) -> Parser {
         let mut parser = Parser {
@@ -52,17 +62,6 @@ impl Parser {
         }
     }
 
-    fn parse_token_to_value(&mut self, token: Token) -> Value {
-        match token {
-            Token::Number(int) => Value::Number(int),
-            Token::String(string) => Value::String(string),
-            Token::Ident(ident) => Value::Ident(ident),
-            Token::True => Value::Bool("true".into()),
-            Token::False => Value::Bool("false".into()),
-            t => panic!("Cannot parse {:?} to Value", t),
-        }
-    }
-
     fn parse_token_to_operator(&mut self, token: Token) -> Operator {
         match token {
             Token::Plus => Operator::Plus,
@@ -81,51 +80,160 @@ impl Parser {
         }
     }
 
-    fn parse_binary_expression(&mut self) -> Expression {
-        let left = self.parse_literal_expression();
-        let token = self.lexer.next_token();
-        let operator = self.parse_token_to_operator(token);
-        let right = self.parse_expression();
-
-        return Expression::Binary {
-            left: Box::new(left),
-            operator,
-            right: Box::new(right),
-        };
-    }
-
-    fn parse_literal_expression(&mut self) -> Expression {
-        let token = self.lexer.curr_token();
-
-        return Expression::Literal(self.parse_token_to_value(token));
-    }
-
-    fn parse_expression(&mut self) -> Expression {
+    /**
+     * primary -> NUMBER | STRING | "true" | "false" | null | "(" expression ")" ;
+     */
+    fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Number(_) | Token::String(_) | Token::Ident(_) | Token::True | Token::False => {
-                match self.lexer.peek_token() {
-                    Token::Plus
-                    | Token::Minus
-                    | Token::Asterisk
-                    | Token::ForwardSlash
-                    | Token::Equal
-                    | Token::NotEqual
-                    | Token::And
-                    | Token::Or
-                    | Token::LessThan
-                    | Token::LessThanOrEqual
-                    | Token::GreaterThan
-                    | Token::GreaterThanOrEqual => self.parse_binary_expression(),
-                    Token::Semicolon
-                    | Token::Eof
-                    | Token::Newline
-                    | Token::RSquirly
-                    | Token::Rparen => self.parse_literal_expression(),
-                    next_token => panic!("Expected an operator or value, got {:?}", next_token),
+            Token::Ident(ident) => return Expression::Literal(Value::Ident(ident)),
+            Token::Number(int) => return Expression::Literal(Value::Number(int)),
+            Token::String(string) => return Expression::Literal(Value::String(string)),
+            Token::True => return Expression::Literal(Value::Bool("true".into())),
+            Token::False => return Expression::Literal(Value::Bool("false".into())),
+            Token::Null => return Expression::Literal(Value::Null),
+            Token::Lparen => {
+                let expr = self.expression();
+                if self.lexer.next_token() != Token::Rparen {
+                    panic!("Expected a closing parenthesis");
                 }
+
+                return Expression::Grouping(Box::new(expr));
             }
-            token => panic!("Expected an expression or value, got {:?}", token),
+            token => panic!("Expected a primary expression, got {:?}", token),
         }
+    }
+
+    /**
+     * unary -> ( "!" | "-" ) unary | primary ;
+     */
+    fn unary(&mut self) -> Expression {
+        match self.lexer.peek_token() {
+            Token::Bang | Token::Minus => {
+                let token = self.lexer.next_token();
+                let operator = self.parse_token_to_operator(token);
+                let right = self.unary();
+
+                return Expression::Unary {
+                    operator,
+                    right: Box::new(right),
+                };
+            }
+            _ => return self.primary(),
+        }
+    }
+
+    /**
+     * factor -> unary ( ( "/" | "*" ) unary )* ;
+     */
+    fn factor(&mut self) -> Expression {
+        let mut expr = self.unary();
+
+        loop {
+            match self.lexer.peek_token() {
+                Token::Asterisk | Token::ForwardSlash => {
+                    let token = self.lexer.next_token();
+                    let operator = self.parse_token_to_operator(token);
+                    let right = self.unary();
+
+                    expr = Expression::Binary {
+                        left: Box::new(expr),
+                        operator,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        return expr;
+    }
+
+    /**
+     * term -> factor ( ( "-" | "+" ) factor )* ;
+     */
+    fn term(&mut self) -> Expression {
+        let mut expr = self.factor();
+
+        loop {
+            match self.lexer.peek_token() {
+                Token::Plus | Token::Minus => {
+                    let token = self.lexer.next_token();
+                    let operator = self.parse_token_to_operator(token);
+                    let right = self.factor();
+
+                    expr = Expression::Binary {
+                        left: Box::new(expr),
+                        operator,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        return expr;
+    }
+
+    /**
+     * comparison -> term ( ( ">" | ">=" | "<" | ">" ) term )* ;
+     */
+    fn comparison(&mut self) -> Expression {
+        let mut expr = self.term();
+
+        loop {
+            match self.lexer.peek_token() {
+                Token::GreaterThan
+                | Token::GreaterThanOrEqual
+                | Token::LessThan
+                | Token::LessThanOrEqual => {
+                    let token = self.lexer.next_token();
+                    let operator = self.parse_token_to_operator(token);
+                    let right = self.term();
+
+                    expr = Expression::Binary {
+                        left: Box::new(expr),
+                        operator,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        return expr;
+    }
+
+    /**
+     * equality -> comparison ( ( "!=" | "==" ) comparison )* ;
+     */
+    fn equality(&mut self) -> Expression {
+        let mut expr = self.comparison();
+
+        loop {
+            match self.lexer.peek_token() {
+                Token::Equal | Token::NotEqual => {
+                    let token = self.lexer.next_token();
+                    let operator = self.parse_token_to_operator(token);
+                    let right = self.comparison();
+
+                    expr = Expression::Binary {
+                        left: Box::new(expr),
+                        operator,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        return expr;
+    }
+
+    /**
+     * expression -> equality ;
+     */
+    fn expression(&mut self) -> Expression {
+        return self.equality();
     }
 
     fn parse_block_statement(&mut self) -> BlockStatement {
@@ -157,7 +265,7 @@ impl Parser {
             panic!("Expected a left parenthesis");
         };
 
-        let condition = self.parse_expression();
+        let condition = self.expression();
 
         let token = self.lexer.next_token();
 
@@ -184,7 +292,7 @@ impl Parser {
 
         match self.lexer.next_token() {
             Token::Assign => {
-                let expression = self.parse_expression();
+                let expression = self.expression();
 
                 Statement::Let(LetStatement { name, expression })
             }
@@ -294,13 +402,13 @@ mod test {
             assert_eq!(
                 statement.expression,
                 Expression::Binary {
-                    left: Box::new(Expression::Literal(Value::Number("3".into()))),
-                    operator: Operator::Minus,
-                    right: Box::new(Expression::Binary {
-                        right: Box::new(Expression::Literal(Value::Number("1".into()))),
-                        operator: Operator::Plus,
-                        left: Box::new(Expression::Literal(Value::Number("4".into()))),
+                    left: Box::new(Expression::Binary {
+                        left: Box::new(Expression::Literal(Value::Number("3".into()))),
+                        operator: Operator::Minus,
+                        right: Box::new(Expression::Literal(Value::Number("4".into()))),
                     }),
+                    operator: Operator::Plus,
+                    right: Box::new(Expression::Literal(Value::Number("1".into()))),
                 }
             );
         }
