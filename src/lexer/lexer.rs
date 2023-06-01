@@ -3,6 +3,7 @@ pub enum Token {
     Ident(String),
     Number(String),
     String(String),
+    Null,
     Illegal,
     Eof,
     Bang,
@@ -148,6 +149,7 @@ impl Lexer {
                     "return" => Token::Return,
                     "true" => Token::True,
                     "false" => Token::False,
+                    "null" => Token::Null,
                     _ => Token::Ident(ident),
                 };
             }
