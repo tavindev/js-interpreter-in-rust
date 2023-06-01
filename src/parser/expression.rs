@@ -31,6 +31,12 @@ impl Expression {
                     Operator::Minus => left.sub(&right),
                     Operator::Asterisk => left.mult(&right),
                     Operator::Slash => left.div(&right),
+                    Operator::GreaterThan => left.gt(&right),
+                    Operator::GreaterThanOrEqual => left.gte(&right),
+                    Operator::LessThan => left.lt(&right),
+                    Operator::LessThanOrEqual => left.lte(&right),
+                    Operator::Equal => left.eq(&right),
+                    Operator::NotEqual => left.eq(&right).not(),
                     _ => unimplemented!(),
                 }
             }
@@ -46,5 +52,46 @@ impl Expression {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_evaluate() {
+        let expression = Expression::Binary {
+            left: Box::new(Expression::Literal(Value::Number(1.0))),
+            operator: Operator::Plus,
+            right: Box::new(Expression::Literal(Value::Number(2.0))),
+        };
+
+        assert_eq!(expression.evaluate(), Value::Number(3.0));
+    }
+
+    #[test]
+    fn test_evaluate_grouping() {
+        let expression = Expression::Binary {
+            left: Box::new(Expression::Literal(Value::Number(7.0))),
+            operator: Operator::Asterisk,
+            right: Box::new(Expression::Grouping(Box::new(Expression::Binary {
+                left: Box::new(Expression::Literal(Value::Number(1.0))),
+                operator: Operator::Plus,
+                right: Box::new(Expression::Literal(Value::Number(2.0))),
+            }))),
+        };
+
+        assert_eq!(expression.evaluate(), Value::Number(21.0));
+    }
+
+    #[test]
+    fn test_evaluate_unary() {
+        let expression = Expression::Unary {
+            operator: Operator::Minus,
+            right: Box::new(Expression::Literal(Value::Number(1.0))),
+        };
+
+        assert_eq!(expression.evaluate(), Value::Number(-1.0));
     }
 }

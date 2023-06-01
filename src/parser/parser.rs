@@ -229,7 +229,7 @@ impl Parser {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     macro_rules! s {
         ($s:expr) => {
             $s.to_string()
