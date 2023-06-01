@@ -5,6 +5,7 @@ pub enum Operator {
     Asterisk,
     Slash,
     Equal,
+    Bang,
     NotEqual,
     LogicalAnd,
     LogicalOr,

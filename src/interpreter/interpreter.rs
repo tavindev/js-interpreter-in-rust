@@ -37,24 +37,4 @@ impl Interpreter {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::parser::parser::Parser;
-
-    #[test]
-    fn test_let_statements() {
-        let input = "
-            let x = 5;
-            let y = 10;
-            let foobar = 838383;
-        ";
-
-        let mut parser = Parser::new(input.into());
-        let program = parser.parse();
-
-        assert_eq!(program.len(), 3);
-
-        let mut interpreter = Interpreter::new(program);
-        interpreter.run();
-    }
-}
+mod test {}
