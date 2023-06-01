@@ -74,21 +74,21 @@ impl Parser {
      */
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Ident(ident) => return Expression::Literal(Value::Ident(ident)),
+            Token::Ident(ident) => Expression::Literal(Value::Ident(ident)),
             Token::Number(int) => {
-                return Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
+                Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
             }
-            Token::String(string) => return Expression::Literal(Value::String(string)),
-            Token::True => return Expression::Literal(Value::Bool(true)),
-            Token::False => return Expression::Literal(Value::Bool(false)),
-            Token::Null => return Expression::Literal(Value::Null),
+            Token::String(string) => Expression::Literal(Value::String(string)),
+            Token::True => Expression::Literal(Value::Bool(true)),
+            Token::False => Expression::Literal(Value::Bool(false)),
+            Token::Null => Expression::Literal(Value::Null),
             Token::Lparen => {
                 let expr = self.expression();
                 if self.lexer.next_token() != Token::Rparen {
                     panic!("Expected a closing parenthesis");
                 }
 
-                return Expression::Grouping(Box::new(expr));
+                Expression::Grouping(Box::new(expr))
             }
             token => panic!("Expected a primary expression, got {:?}", token),
         }
