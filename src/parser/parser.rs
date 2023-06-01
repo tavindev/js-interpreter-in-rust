@@ -3,10 +3,7 @@ use crate::{
     parser::operator::Operator,
 };
 
-use super::{
-    expression::{Expression, Value},
-    ident::Ident,
-};
+use super::{expression::Expression, ident::Ident, value::Value};
 
 pub struct Parser {
     lexer: Lexer,
@@ -78,10 +75,12 @@ impl Parser {
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
             Token::Ident(ident) => return Expression::Literal(Value::Ident(ident)),
-            Token::Number(int) => return Expression::Literal(Value::Number(int)),
+            Token::Number(int) => {
+                return Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
+            }
             Token::String(string) => return Expression::Literal(Value::String(string)),
-            Token::True => return Expression::Literal(Value::Bool("true".into())),
-            Token::False => return Expression::Literal(Value::Bool("false".into())),
+            Token::True => return Expression::Literal(Value::Bool(true)),
+            Token::False => return Expression::Literal(Value::Bool(false)),
             Token::Null => return Expression::Literal(Value::Null),
             Token::Lparen => {
                 let expr = self.expression();
@@ -245,7 +244,7 @@ mod test {
         let mut parser = Parser::new(s!("1;"));
         let expr = parser.expression();
 
-        assert_eq!(expr, Expression::Literal(Value::Number(s!("1"))));
+        assert_eq!(expr, Expression::Literal(Value::Number(1.0)));
     }
 
     #[test]
@@ -256,9 +255,9 @@ mod test {
         assert_eq!(
             expr,
             Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(s!("1")))),
+                left: Box::new(Expression::Literal(Value::Number(1.0))),
                 operator: Operator::Plus,
-                right: Box::new(Expression::Literal(Value::Number(s!("2")))),
+                right: Box::new(Expression::Literal(Value::Number(2.0))),
             }
         );
     }
@@ -271,9 +270,9 @@ mod test {
         assert_eq!(
             expr,
             Expression::Grouping(Box::new(Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(s!("1")))),
+                left: Box::new(Expression::Literal(Value::Number(1.0))),
                 operator: Operator::Plus,
-                right: Box::new(Expression::Literal(Value::Number(s!("2")))),
+                right: Box::new(Expression::Literal(Value::Number(2.0))),
             }))
         );
     }
@@ -287,7 +286,7 @@ mod test {
             expr,
             Expression::Unary {
                 operator: Operator::Bang,
-                right: Box::new(Expression::Literal(Value::Bool(s!("true")))),
+                right: Box::new(Expression::Literal(Value::Bool(true))),
             }
         );
     }
@@ -303,7 +302,7 @@ mod test {
                 operator: Operator::Bang,
                 right: Box::new(Expression::Grouping(Box::new(Expression::Unary {
                     operator: Operator::Bang,
-                    right: Box::new(Expression::Literal(Value::Bool(s!("true")))),
+                    right: Box::new(Expression::Literal(Value::Bool(true))),
                 }))),
             }
         );
@@ -321,10 +320,10 @@ mod test {
                 right: Box::new(Expression::Grouping(Box::new(Expression::Binary {
                     left: Box::new(Expression::Unary {
                         operator: Operator::Bang,
-                        right: Box::new(Expression::Literal(Value::Bool(s!("true")))),
+                        right: Box::new(Expression::Literal(Value::Bool(true))),
                     }),
                     operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Number(s!("1")))),
+                    right: Box::new(Expression::Literal(Value::Number(1.0))),
                 }))),
             }
         );
@@ -338,12 +337,12 @@ mod test {
         assert_eq!(
             expr,
             Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(s!("1")))),
+                left: Box::new(Expression::Literal(Value::Number(1.0))),
                 operator: Operator::Plus,
                 right: Box::new(Expression::Binary {
-                    left: Box::new(Expression::Literal(Value::Number(s!("2")))),
+                    left: Box::new(Expression::Literal(Value::Number(2.0))),
                     operator: Operator::Asterisk,
-                    right: Box::new(Expression::Literal(Value::Number(s!("3")))),
+                    right: Box::new(Expression::Literal(Value::Number(3.0))),
                 }),
             }
         );
@@ -358,12 +357,12 @@ mod test {
             expr,
             Expression::Binary {
                 left: Box::new(Expression::Grouping(Box::new(Expression::Binary {
-                    left: Box::new(Expression::Literal(Value::Number(s!("1")))),
+                    left: Box::new(Expression::Literal(Value::Number(1.0))),
                     operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Number(s!("2")))),
+                    right: Box::new(Expression::Literal(Value::Number(2.0))),
                 }))),
                 operator: Operator::Asterisk,
-                right: Box::new(Expression::Literal(Value::Number(s!("3")))),
+                right: Box::new(Expression::Literal(Value::Number(3.0))),
             }
         );
     }

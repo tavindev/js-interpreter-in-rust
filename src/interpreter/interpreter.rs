@@ -1,38 +1,25 @@
-use std::collections::HashMap;
-
-use crate::parser::{
-    expression::Expression,
-    ident::Ident,
-    statements::{r#let::LetStatement, statement::Statement},
-};
-
-struct Environment {
-    store: HashMap<Ident, Expression>,
-}
+use crate::parser::parser::Parser;
 
 pub struct Interpreter {
-    statements: Vec<Statement>,
-    env: Environment,
+    parser: Parser,
 }
 
 impl Interpreter {
-    pub fn new(statements: Vec<Statement>) -> Interpreter {
+    pub fn new(input: String) -> Interpreter {
         Interpreter {
-            statements,
-            env: Environment {
-                store: HashMap::new(),
-            },
+            parser: Parser::new(input),
         }
     }
 
+    /**
+     * Eval each expression
+     */
     pub fn run(&mut self) {
-        for statement in self.statements.iter() {
-            if let Statement::Let(LetStatement { name, expression }) = statement {
-                self.env.store.insert(name.clone(), expression.clone());
-            }
-        }
+        let expressions = self.parser.parse();
 
-        println!("{:?}", self.env.store);
+        for expression in expressions.iter().cloned() {
+            println!("{:?}", expression.evaluate());
+        }
     }
 }
 
