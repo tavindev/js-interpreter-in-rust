@@ -3,14 +3,7 @@ use crate::{
     parser::operator::Operator,
 };
 
-use super::{
-    expression::Expression,
-    ident::Ident,
-    statements::{
-        block::BlockStatement, r#if::IfStatement, r#let::LetStatement, statement::Statement,
-    },
-    value::Value,
-};
+use super::{expression::Expression, ident::Ident, statements::statement::Statement, value::Value};
 
 pub struct Parser {
     lexer: Lexer,
@@ -38,10 +31,9 @@ impl Parser {
 
         while !self.lexer.is_at_end() {
             statements.push(self.statement());
-            self.lexer.match_token_and_consume(Token::Semicolon);
         }
 
-        statements
+        return statements;
     }
 
     fn statement(&mut self) -> Statement {
@@ -103,9 +95,7 @@ impl Parser {
             expression = Some(self.expression());
         }
 
-        if self.lexer.next_token() != Token::Semicolon {
-            panic!("Expected a semicolon");
-        }
+        self.lexer.match_token_and_consume(Token::Semicolon);
 
         return Statement::_let(ident, expression);
     }
@@ -153,6 +143,7 @@ impl Parser {
 
         while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
             statements.push(self.statement());
+            self.lexer.match_token_and_consume(Token::Semicolon);
         }
 
         if self.lexer.next_token() != Token::RSquirly {
@@ -445,13 +436,7 @@ mod tests {
         let stmt = parser.parse();
 
         for stmt in stmt {
-            assert_eq!(
-                stmt,
-                Statement::Let(LetStatement {
-                    ident: Ident(s!("a")),
-                    expression: None,
-                })
-            );
+            assert_eq!(stmt, Statement::_let(Ident(s!("a")), None,));
         }
     }
 
@@ -463,10 +448,10 @@ mod tests {
         for stmt in stmt {
             assert_eq!(
                 stmt,
-                Statement::Let(LetStatement {
-                    ident: Ident(s!("a")),
-                    expression: Some(Expression::Literal(Value::Number(1.0))),
-                })
+                Statement::_let(
+                    Ident(s!("a")),
+                    Some(Expression::Literal(Value::Number(1.0))),
+                )
             );
         }
     }
@@ -505,9 +490,9 @@ mod tests {
         for stmt in stmt {
             assert_eq!(
                 stmt,
-                Statement::Block(BlockStatement(vec![Statement::Expression(
-                    Expression::Literal(Value::Number(1.0))
-                )],))
+                Statement::_block(vec![Statement::_expression(Expression::literal(
+                    Value::Number(1.0)
+                ))])
             );
         }
     }
@@ -518,7 +503,7 @@ mod tests {
         let stmt = parser.parse();
 
         for stmt in stmt {
-            assert_eq!(stmt, Statement::Block(BlockStatement(vec![],)));
+            assert_eq!(stmt, Statement::_block(vec![]));
         }
     }
 
@@ -530,13 +515,13 @@ mod tests {
         for stmt in stmt {
             assert_eq!(
                 stmt,
-                Statement::If(IfStatement {
-                    condition: Expression::Literal(Value::Bool(true)),
-                    consequence: Box::new(Statement::Block(BlockStatement(vec![
-                        Statement::Expression(Expression::Literal(Value::Number(1.0)))
-                    ],))),
-                    alternative: None,
-                })
+                Statement::_if(
+                    Expression::Literal(Value::Bool(true)),
+                    Statement::_block(vec![Statement::Expression(Expression::Literal(
+                        Value::Number(1.0)
+                    ))],),
+                    None,
+                )
             );
         }
     }
