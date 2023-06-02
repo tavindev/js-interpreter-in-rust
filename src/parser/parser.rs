@@ -38,6 +38,7 @@ impl Parser {
 
         while !self.lexer.is_at_end() {
             statements.push(self.statement());
+            self.lexer.match_token_and_consume(Token::Semicolon);
         }
 
         statements
@@ -106,7 +107,7 @@ impl Parser {
             panic!("Expected a semicolon");
         }
 
-        return Statement::Let(LetStatement { ident, expression });
+        return Statement::_let(ident, expression);
     }
 
     fn if_statement(&mut self) -> Statement {
@@ -124,42 +125,33 @@ impl Parser {
             panic!("Expected a left brace");
         }
 
-        let consequence = Box::new(self.block_statement());
+        let consequence = self.block_statement();
 
         let alternative = if self.lexer.match_token_and_consume(Token::Else) {
             if self.lexer.next_token() != Token::LSquirly {
                 panic!("Expected a left brace");
             }
 
-            let alternative = Box::new(self.block_statement());
+            let alternative = self.block_statement();
 
             Some(alternative)
         } else {
             None
         };
 
-        return Statement::If(IfStatement {
-            condition,
-            consequence,
-            alternative,
-        });
+        return Statement::_if(condition, consequence, alternative);
     }
 
     fn expression_statement(&mut self) -> Statement {
         let expression = self.expression();
 
-        if self.lexer.next_token() != Token::Semicolon {
-            panic!("Expected a semicolon");
-        }
-
-        return Statement::Expression(expression);
+        return Statement::_expression(expression);
     }
 
     fn block_statement(&mut self) -> Statement {
         let mut statements = Vec::new();
 
         while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
-            println!("peek_token: {:?}", self.lexer.peek_token());
             statements.push(self.statement());
         }
 
@@ -167,7 +159,7 @@ impl Parser {
             panic!("Expected a right brace");
         }
 
-        return Statement::Block(BlockStatement(statements));
+        return Statement::_block(statements);
     }
 
     /**
@@ -185,11 +177,12 @@ impl Parser {
             Token::Null => Expression::Literal(Value::Null),
             Token::Lparen => {
                 let expr = self.expression();
+
                 if self.lexer.next_token() != Token::Rparen {
                     panic!("Expected a closing parenthesis");
                 }
 
-                Expression::Grouping(Box::new(expr))
+                Expression::grouping(expr)
             }
             token => panic!("Expected a primary expression, got {:?}", token),
         }
@@ -205,10 +198,7 @@ impl Parser {
                 let operator = self.parse_token_to_operator(token);
                 let right = self.unary();
 
-                return Expression::Unary {
-                    operator,
-                    right: Box::new(right),
-                };
+                return Expression::unary(operator, right);
             }
             _ => return self.primary(),
         }
@@ -227,11 +217,7 @@ impl Parser {
                     let operator = self.parse_token_to_operator(token);
                     let right = self.unary();
 
-                    expr = Expression::Binary {
-                        left: Box::new(expr),
-                        operator,
-                        right: Box::new(right),
-                    };
+                    expr = Expression::binary(expr, operator, right);
                 }
                 _ => break,
             }
@@ -253,11 +239,7 @@ impl Parser {
                     let operator = self.parse_token_to_operator(token);
                     let right = self.factor();
 
-                    expr = Expression::Binary {
-                        left: Box::new(expr),
-                        operator,
-                        right: Box::new(right),
-                    };
+                    expr = Expression::binary(expr, operator, right);
                 }
                 _ => break,
             }
@@ -282,11 +264,7 @@ impl Parser {
                     let operator = self.parse_token_to_operator(token);
                     let right = self.term();
 
-                    expr = Expression::Binary {
-                        left: Box::new(expr),
-                        operator,
-                        right: Box::new(right),
-                    };
+                    expr = Expression::binary(expr, operator, right);
                 }
                 _ => break,
             }
@@ -308,11 +286,7 @@ impl Parser {
                     let operator = self.parse_token_to_operator(token);
                     let right = self.comparison();
 
-                    expr = Expression::Binary {
-                        left: Box::new(expr),
-                        operator,
-                        right: Box::new(right),
-                    };
+                    expr = Expression::binary(expr, operator, right);
                 }
                 _ => break,
             }
@@ -345,7 +319,7 @@ mod tests {
         let mut parser = Parser::new(s!("1;"));
         let expr = parser.expression();
 
-        assert_eq!(expr, Expression::Literal(Value::Number(1.0)));
+        assert_eq!(expr, Expression::literal(Value::Number(1.0)));
     }
 
     #[test]
@@ -355,11 +329,11 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(1.0))),
-                operator: Operator::Plus,
-                right: Box::new(Expression::Literal(Value::Number(2.0))),
-            }
+            Expression::binary(
+                Expression::literal(Value::Number(1.0)),
+                Operator::Plus,
+                Expression::literal(Value::Number(2.0)),
+            )
         );
     }
 
@@ -370,11 +344,11 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Grouping(Box::new(Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(1.0))),
-                operator: Operator::Plus,
-                right: Box::new(Expression::Literal(Value::Number(2.0))),
-            }))
+            Expression::grouping(Expression::binary(
+                Expression::literal(Value::Number(1.0)),
+                Operator::Plus,
+                Expression::literal(Value::Number(2.0)),
+            ))
         );
     }
 
@@ -385,10 +359,7 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Unary {
-                operator: Operator::Bang,
-                right: Box::new(Expression::Literal(Value::Bool(true))),
-            }
+            Expression::unary(Operator::Bang, Expression::literal(Value::Bool(true)))
         );
     }
 
@@ -399,13 +370,13 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Unary {
-                operator: Operator::Bang,
-                right: Box::new(Expression::Grouping(Box::new(Expression::Unary {
-                    operator: Operator::Bang,
-                    right: Box::new(Expression::Literal(Value::Bool(true))),
-                }))),
-            }
+            Expression::unary(
+                Operator::Bang,
+                Expression::grouping(Expression::unary(
+                    Operator::Bang,
+                    Expression::literal(Value::Bool(true))
+                ))
+            )
         );
     }
 
@@ -416,17 +387,14 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Unary {
-                operator: Operator::Bang,
-                right: Box::new(Expression::Grouping(Box::new(Expression::Binary {
-                    left: Box::new(Expression::Unary {
-                        operator: Operator::Bang,
-                        right: Box::new(Expression::Literal(Value::Bool(true))),
-                    }),
-                    operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Number(1.0))),
-                }))),
-            }
+            Expression::unary(
+                Operator::Bang,
+                Expression::grouping(Expression::binary(
+                    Expression::unary(Operator::Bang, Expression::literal(Value::Bool(true))),
+                    Operator::Plus,
+                    Expression::literal(Value::Number(1.0)),
+                ))
+            )
         );
     }
 
@@ -437,15 +405,15 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Binary {
-                left: Box::new(Expression::Literal(Value::Number(1.0))),
-                operator: Operator::Plus,
-                right: Box::new(Expression::Binary {
-                    left: Box::new(Expression::Literal(Value::Number(2.0))),
-                    operator: Operator::Asterisk,
-                    right: Box::new(Expression::Literal(Value::Number(3.0))),
-                }),
-            }
+            Expression::binary(
+                Expression::literal(Value::Number(1.0)),
+                Operator::Plus,
+                Expression::binary(
+                    Expression::literal(Value::Number(2.0)),
+                    Operator::Asterisk,
+                    Expression::literal(Value::Number(3.0)),
+                ),
+            )
         );
     }
 
@@ -456,15 +424,15 @@ mod tests {
 
         assert_eq!(
             expr,
-            Expression::Binary {
-                left: Box::new(Expression::Grouping(Box::new(Expression::Binary {
-                    left: Box::new(Expression::Literal(Value::Number(1.0))),
-                    operator: Operator::Plus,
-                    right: Box::new(Expression::Literal(Value::Number(2.0))),
-                }))),
-                operator: Operator::Asterisk,
-                right: Box::new(Expression::Literal(Value::Number(3.0))),
-            }
+            Expression::binary(
+                Expression::grouping(Expression::binary(
+                    Expression::literal(Value::Number(1.0)),
+                    Operator::Plus,
+                    Expression::literal(Value::Number(2.0)),
+                )),
+                Operator::Asterisk,
+                Expression::literal(Value::Number(3.0)),
+            )
         );
     }
 

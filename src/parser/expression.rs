@@ -16,6 +16,29 @@ pub enum Expression {
 }
 
 impl Expression {
+    pub fn grouping(expression: Expression) -> Expression {
+        Expression::Grouping(Box::new(expression))
+    }
+
+    pub fn literal(value: Value) -> Expression {
+        Expression::Literal(value)
+    }
+
+    pub fn unary(operator: Operator, right: Expression) -> Expression {
+        Expression::Unary {
+            operator,
+            right: Box::new(right),
+        }
+    }
+
+    pub fn binary(left: Expression, operator: Operator, right: Expression) -> Expression {
+        Expression::Binary {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        }
+    }
+
     pub fn evaluate(&self) -> Value {
         match self {
             Expression::Binary {
