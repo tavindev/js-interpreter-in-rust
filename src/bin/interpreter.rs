@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use js_interpreter_in_rust::interpreter::interpreter::Interpreter;
+use js_interpreter_in_rust::{interpreter::interpreter::Interpreter, parser::parser::Parser};
 
 fn main() {
     let stdin = std::io::stdin();
@@ -12,6 +12,7 @@ fn main() {
         let mut line = String::new();
         stdin.read_line(&mut line).unwrap();
 
-        Interpreter::new(line).run();
+        let statements = Parser::new(line).parse();
+        Interpreter::new(statements).run();
     }
 }

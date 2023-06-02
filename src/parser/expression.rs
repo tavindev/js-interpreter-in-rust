@@ -5,6 +5,10 @@ pub enum Expression {
     Variable(Ident),
     Grouping(Box<Expression>),
     Literal(Value),
+    Assignement {
+        ident: Ident,
+        value: Box<Expression>,
+    },
     Unary {
         operator: Operator,
         right: Box<Expression>,
@@ -40,8 +44,16 @@ impl Expression {
         }
     }
 
+    pub fn assignement(ident: Ident, value: Expression) -> Expression {
+        Expression::Assignement {
+            ident,
+            value: Box::new(value),
+        }
+    }
+
     pub fn evaluate(&self) -> Value {
         match self {
+            Expression::Assignement { ident: _, value } => value.evaluate(),
             Expression::Binary {
                 left,
                 operator,

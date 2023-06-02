@@ -28,7 +28,7 @@ impl Statement {
     }
 
     pub fn _block(statements: Vec<Statement>) -> Self {
-        Self::Block(BlockStatement(statements))
+        Self::Block(BlockStatement::new(statements))
     }
 
     pub fn _expression(expression: Expression) -> Self {

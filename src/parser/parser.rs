@@ -93,7 +93,7 @@ impl Parser {
      */
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Ident(ident) => Expression::Variable(Ident(ident)),
+            Token::Ident(ident) => Expression::Variable(Ident::new(ident)),
             Token::Number(int) => {
                 Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
             }
@@ -222,15 +222,35 @@ impl Parser {
     }
 
     /**
-     * expression -> equality ;
+     * assignment -> IDENTIFIER "=" assignment | equality ;
+     */
+    fn assignment(&mut self) -> Expression {
+        let expr = self.equality();
+
+        if self.lexer.match_token_and_consume(Token::Assign) {
+            let ident = match expr {
+                Expression::Variable(ident) => ident,
+                _ => panic!("Expected an identifier"),
+            };
+
+            let value = self.assignment();
+
+            return Expression::assignement(ident, value);
+        }
+
+        return expr;
+    }
+
+    /**
+     * expression -> assignment ;
      */
     fn expression(&mut self) -> Expression {
-        return self.equality();
+        return self.assignment();
     }
 
     fn parse_ident(&mut self) -> Ident {
         match self.lexer.next_token() {
-            Token::Ident(ident) => return Ident(ident),
+            Token::Ident(ident) => return Ident::new(ident),
             _ => panic!("Expected an identifier"),
         }
     }
@@ -310,14 +330,8 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    macro_rules! s {
-        ($s:expr) => {
-            $s.to_string()
-        };
-    }
-
     use super::*;
-    use crate::parser::expression::Expression;
+    use crate::{parser::expression::Expression, s};
 
     #[test]
     fn literal_expression() {
@@ -450,7 +464,7 @@ mod tests {
         let stmt = parser.parse();
 
         for stmt in stmt {
-            assert_eq!(stmt, Statement::_let(Ident(s!("a")), None,));
+            assert_eq!(stmt, Statement::_let(Ident::new("a"), None,));
         }
     }
 
@@ -463,7 +477,7 @@ mod tests {
             assert_eq!(
                 stmt,
                 Statement::_let(
-                    Ident(s!("a")),
+                    Ident::new("a"),
                     Some(Expression::Literal(Value::Number(1.0))),
                 )
             );
@@ -549,11 +563,11 @@ mod tests {
     //         assert_eq!(
     //             stmt,
     //             Statement::If(IfStatement {
-    //                 condition: Expression::Literal(Ident(s!("a"))),
+    //                 condition: Expression::Literal(Ident::new("a")),
     //                 consequence: Box::new(Statement::Block(BlockStatement(vec![],))),
     //                 alternative: Some(Box::new(Statement::Block(BlockStatement(vec![
     //                     Statement::Expression(Expression::Assign {
-    //                         ident: Ident(s!("a")),
+    //                         ident: Ident::new("a"),
     //                         expression: Box::new(Expression::Literal(Value::Bool(true))),
     //                     })
     //                 ],)))),
