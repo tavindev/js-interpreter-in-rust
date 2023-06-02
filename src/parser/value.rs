@@ -2,7 +2,6 @@ use core::fmt;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
-    Ident(String), // TODO: Remove this
     Number(f64),
     String(String),
     Bool(bool),
@@ -12,7 +11,6 @@ pub enum Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Ident(ident) => write!(f, "{}", ident),
             Value::Number(number) => write!(f, "{}", number),
             Value::String(string) => write!(f, "{}", string),
             Value::Bool(bool) => write!(f, "{}", bool),

@@ -26,24 +26,52 @@ impl Parser {
         }
     }
 
+    /**
+     * parse -> declaration* EOF ;
+     */
     pub fn parse(&mut self) -> Vec<Statement> {
         let mut statements = Vec::new();
 
         while !self.lexer.is_at_end() {
-            statements.push(self.statement());
+            statements.push(self.declaration());
         }
 
         return statements;
     }
 
+    /**
+     * varDecl -> "let" IDENTIFIER ( "=" expression )? ";" ;
+     */
+    fn var_decl(&mut self) -> Statement {
+        let ident = self.parse_ident();
+        let mut expr = None;
+
+        if self.lexer.match_token_and_consume(Token::Assign) {
+            expr = Some(self.expression());
+        }
+
+        self.lexer.match_token_and_consume(Token::Semicolon);
+
+        return Statement::_let(ident, expr);
+    }
+
+    /**
+     * declaration -> varDecl | statement ;
+     */
+    fn declaration(&mut self) -> Statement {
+        if self.lexer.match_token_and_consume(Token::Let) {
+            return self.var_decl();
+        }
+
+        return self.statement();
+    }
+
+    /**
+     * statement -> exprStmt | printStmt ;
+     */
     fn statement(&mut self) -> Statement {
         // repeating, yes, but expression_statement should not consume first token
         let statement = match self.lexer.peek_token() {
-            Token::Let => {
-                self.lexer.next_token();
-
-                self.let_statement()
-            }
             Token::If => {
                 self.lexer.next_token();
 
@@ -60,105 +88,12 @@ impl Parser {
         return statement;
     }
 
-    fn parse_ident(&mut self) -> Ident {
-        match self.lexer.next_token() {
-            Token::Ident(ident) => return Ident(ident),
-            _ => panic!("Expected an identifier"),
-        }
-    }
-
-    fn parse_token_to_operator(&mut self, token: Token) -> Operator {
-        match token {
-            Token::Plus => Operator::Plus,
-            Token::Minus => Operator::Minus,
-            Token::Asterisk => Operator::Asterisk,
-            Token::ForwardSlash => Operator::Slash,
-            Token::Bang => Operator::Bang,
-            Token::Equal => Operator::Equal,
-            Token::NotEqual => Operator::NotEqual,
-            Token::And => Operator::And,
-            Token::Or => Operator::Or,
-            Token::LessThan => Operator::LessThan,
-            Token::LessThanOrEqual => Operator::LessThanOrEqual,
-            Token::GreaterThan => Operator::GreaterThan,
-            Token::GreaterThanOrEqual => Operator::GreaterThanOrEqual,
-            token => panic!("Expected an operator, got {:?}", token),
-        }
-    }
-
-    fn let_statement(&mut self) -> Statement {
-        let ident = self.parse_ident();
-
-        let mut expression: Option<Expression> = None;
-
-        if self.lexer.match_token_and_consume(Token::Assign) {
-            expression = Some(self.expression());
-        }
-
-        self.lexer.match_token_and_consume(Token::Semicolon);
-
-        return Statement::_let(ident, expression);
-    }
-
-    fn if_statement(&mut self) -> Statement {
-        if self.lexer.next_token() != Token::Lparen {
-            panic!("Expected a left parenthesis");
-        }
-
-        let condition = self.expression();
-
-        if self.lexer.next_token() != Token::Rparen {
-            panic!("Expected a right parenthesis");
-        }
-
-        if self.lexer.next_token() != Token::LSquirly {
-            panic!("Expected a left brace");
-        }
-
-        let consequence = self.block_statement();
-
-        let alternative = if self.lexer.match_token_and_consume(Token::Else) {
-            if self.lexer.next_token() != Token::LSquirly {
-                panic!("Expected a left brace");
-            }
-
-            let alternative = self.block_statement();
-
-            Some(alternative)
-        } else {
-            None
-        };
-
-        return Statement::_if(condition, consequence, alternative);
-    }
-
-    fn expression_statement(&mut self) -> Statement {
-        let expression = self.expression();
-
-        return Statement::_expression(expression);
-    }
-
-    fn block_statement(&mut self) -> Statement {
-        let mut statements = Vec::new();
-
-        while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
-            statements.push(self.statement());
-            self.lexer.match_token_and_consume(Token::Semicolon);
-        }
-
-        if self.lexer.next_token() != Token::RSquirly {
-            panic!("Expected a right brace");
-        }
-
-        return Statement::_block(statements);
-    }
-
     /**
-     * primary -> NUMBER | STRING | "true" | "false" | null | "(" expression ")" ;
+     * primary -> NUMBER | STRING | "true" | "false" | null | "(" expression ")" | IDENTIFIER ;
      */
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Ident(ident) => Expression::Literal(Value::Ident(ident)),
+            Token::Ident(ident) => Expression::Variable(Ident(ident)),
             Token::Number(int) => {
                 Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
             }
@@ -291,6 +226,85 @@ impl Parser {
      */
     fn expression(&mut self) -> Expression {
         return self.equality();
+    }
+
+    fn parse_ident(&mut self) -> Ident {
+        match self.lexer.next_token() {
+            Token::Ident(ident) => return Ident(ident),
+            _ => panic!("Expected an identifier"),
+        }
+    }
+
+    fn parse_token_to_operator(&mut self, token: Token) -> Operator {
+        match token {
+            Token::Plus => Operator::Plus,
+            Token::Minus => Operator::Minus,
+            Token::Asterisk => Operator::Asterisk,
+            Token::ForwardSlash => Operator::Slash,
+            Token::Bang => Operator::Bang,
+            Token::Equal => Operator::Equal,
+            Token::NotEqual => Operator::NotEqual,
+            Token::And => Operator::And,
+            Token::Or => Operator::Or,
+            Token::LessThan => Operator::LessThan,
+            Token::LessThanOrEqual => Operator::LessThanOrEqual,
+            Token::GreaterThan => Operator::GreaterThan,
+            Token::GreaterThanOrEqual => Operator::GreaterThanOrEqual,
+            token => panic!("Expected an operator, got {:?}", token),
+        }
+    }
+
+    fn if_statement(&mut self) -> Statement {
+        if self.lexer.next_token() != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        }
+
+        let condition = self.expression();
+
+        if self.lexer.next_token() != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        }
+
+        if self.lexer.next_token() != Token::LSquirly {
+            panic!("Expected a left brace");
+        }
+
+        let consequence = self.block_statement();
+
+        let alternative = if self.lexer.match_token_and_consume(Token::Else) {
+            if self.lexer.next_token() != Token::LSquirly {
+                panic!("Expected a left brace");
+            }
+
+            let alternative = self.block_statement();
+
+            Some(alternative)
+        } else {
+            None
+        };
+
+        return Statement::_if(condition, consequence, alternative);
+    }
+
+    fn expression_statement(&mut self) -> Statement {
+        let expression = self.expression();
+
+        return Statement::_expression(expression);
+    }
+
+    fn block_statement(&mut self) -> Statement {
+        let mut statements = Vec::new();
+
+        while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
+            statements.push(self.statement());
+            self.lexer.match_token_and_consume(Token::Semicolon);
+        }
+
+        if self.lexer.next_token() != Token::RSquirly {
+            panic!("Expected a right brace");
+        }
+
+        return Statement::_block(statements);
     }
 }
 

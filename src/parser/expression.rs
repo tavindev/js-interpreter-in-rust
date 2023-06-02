@@ -1,7 +1,8 @@
-use super::{operator::Operator, value::Value};
+use super::{ident::Ident, operator::Operator, value::Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
+    Variable(Ident),
     Grouping(Box<Expression>),
     Literal(Value),
     Unary {
@@ -74,6 +75,7 @@ impl Expression {
                     _ => unimplemented!(),
                 }
             }
+            Expression::Variable(ident) => unimplemented!(),
         }
     }
 }
