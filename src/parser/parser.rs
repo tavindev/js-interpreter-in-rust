@@ -75,7 +75,7 @@ impl Parser {
     }
 
     /**
-     * statement -> exprStmt | printStmt | block ;
+     * statement -> exprStmt | ifStmt | printStmt | block ;
      */
     fn statement(&mut self) -> Statement {
         if self.lexer.match_token_and_consume(Token::If) {
@@ -275,6 +275,9 @@ impl Parser {
         }
     }
 
+    /**
+     * if -> "if" "(" expression ")" statement ( "else" statement )? ;
+     */
     fn if_statement(&mut self) -> Statement {
         if self.lexer.next_token() != Token::Lparen {
             panic!("Expected a left parenthesis");
@@ -286,20 +289,10 @@ impl Parser {
             panic!("Expected a right parenthesis");
         }
 
-        if self.lexer.next_token() != Token::LSquirly {
-            panic!("Expected a left brace");
-        }
-
-        let consequence = self.block();
+        let consequence = self.statement();
 
         let alternative = if self.lexer.match_token_and_consume(Token::Else) {
-            if self.lexer.next_token() != Token::LSquirly {
-                panic!("Expected a left brace");
-            }
-
-            let alternative = self.block();
-
-            Some(alternative)
+            Some(self.statement())
         } else {
             None
         };
