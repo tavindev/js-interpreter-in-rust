@@ -125,6 +125,14 @@ impl Value {
     pub fn neq(&self, other: &Value) -> Value {
         return self.eq(other).not();
     }
+
+    pub fn and(&self, other: &Value) -> Value {
+        return Value::Bool(self.is_truthy() && other.is_truthy());
+    }
+
+    pub fn or(&self, other: &Value) -> Value {
+        return Value::Bool(self.is_truthy() || other.is_truthy());
+    }
 }
 
 #[cfg(test)]

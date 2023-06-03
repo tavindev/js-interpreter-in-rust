@@ -223,10 +223,10 @@ impl Parser {
     }
 
     /**
-     * assignment -> IDENTIFIER "=" assignment | equality ;
+     * assignment -> IDENTIFIER "=" assignment | logic_or ;
      */
     fn assignment(&mut self) -> Expression {
-        let expr = self.equality();
+        let expr = self.or();
 
         if self.lexer.match_token_and_consume(Token::Assign) {
             let ident = match expr {
@@ -237,6 +237,38 @@ impl Parser {
             let value = self.assignment();
 
             return Expression::assignement(ident, value);
+        }
+
+        return expr;
+    }
+
+    /**
+     * logic_or -> logic_and ( "or" logic_and )* ;
+     */
+    fn or(&mut self) -> Expression {
+        let mut expr = self.and();
+
+        while self.lexer.match_token_and_consume(Token::Or) {
+            let operator = Operator::Or;
+            let right = self.and();
+
+            expr = Expression::binary(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    /**
+     * logic_and -> equality ( "and" equality )* ;
+     */
+    fn and(&mut self) -> Expression {
+        let mut expr = self.equality();
+
+        while self.lexer.match_token_and_consume(Token::And) {
+            let operator = Operator::And;
+            let right = self.equality();
+
+            expr = Expression::binary(expr, operator, right); // should we create Expression::logical?
         }
 
         return expr;

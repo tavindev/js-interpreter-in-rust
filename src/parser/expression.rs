@@ -73,6 +73,8 @@ impl Expression {
                     Operator::LessThanOrEqual => left.lte(&right),
                     Operator::Equal => left.eq(&right),
                     Operator::NotEqual => left.neq(&right),
+                    Operator::And => left.and(&right),
+                    Operator::Or => left.or(&right),
                     _ => unimplemented!(),
                 }
             }
