@@ -1,5 +1,7 @@
 use super::environment::Environment;
-use crate::parser::{expression::Expression, statements::statement::Statement, value::Value};
+use crate::parser::{
+    expression::Expression, operator::Operator, statements::statement::Statement, value::Value,
+};
 
 pub struct Interpreter {
     statements: Vec<Statement>,
@@ -14,10 +16,57 @@ impl Interpreter {
         }
     }
 
+    pub fn evaluate(&self, expr: Expression) -> Value {
+        match expr {
+            Expression::Assignement { ident: _, value } => self.evaluate(*value),
+            Expression::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(*left);
+                let right = self.evaluate(*right);
+
+                match operator {
+                    Operator::Plus => left.sum(&right),
+                    Operator::Minus => left.sub(&right),
+                    Operator::Asterisk => left.mult(&right),
+                    Operator::Slash => left.div(&right),
+                    Operator::GreaterThan => left.gt(&right),
+                    Operator::GreaterThanOrEqual => left.gte(&right),
+                    Operator::LessThan => left.lt(&right),
+                    Operator::LessThanOrEqual => left.lte(&right),
+                    Operator::Equal => left.eq(&right),
+                    Operator::NotEqual => left.neq(&right),
+                    Operator::And => left.and(&right),
+                    Operator::Or => left.or(&right),
+                    _ => unimplemented!(),
+                }
+            }
+            Expression::Grouping(expression) => self.evaluate(*expression),
+            Expression::Literal(value) => value.clone(),
+            Expression::Unary { operator, right } => {
+                let right = self.evaluate(*right);
+
+                match operator {
+                    Operator::Minus => Value::Number(-right.to_number()),
+                    Operator::Bang => Value::Bool(!right.is_truthy()),
+                    _ => unimplemented!(),
+                }
+            }
+            Expression::Variable(ident) => {
+                let ident_value = ident.value();
+                let name = ident_value.as_str();
+
+                return self.environment.get(name).clone();
+            }
+        }
+    }
+
     fn execute(&mut self, statement: Statement) {
         match statement {
             Statement::Print(stmt) => {
-                let value = stmt.evaluate();
+                let value = self.evaluate(stmt);
                 println!("{:?}", value);
             }
             Statement::Let(stmt) => {
@@ -25,7 +74,7 @@ impl Interpreter {
                 let name = ident.value();
 
                 if let Some(expression) = stmt.expression {
-                    let value = expression.evaluate();
+                    let value = self.evaluate(expression);
 
                     self.environment.define(name, value);
                 } else {
@@ -33,7 +82,7 @@ impl Interpreter {
                 }
             }
             Statement::If(stmt) => {
-                let condition = stmt.condition.evaluate();
+                let condition = self.evaluate(stmt.condition);
 
                 if condition.is_truthy() {
                     self.execute(*stmt.consequence);
@@ -42,9 +91,7 @@ impl Interpreter {
                 }
             }
             Statement::While(stmt) => {
-                let condition = stmt.condition.evaluate();
-
-                while condition.is_truthy() {
+                while self.evaluate(stmt.condition.clone()).is_truthy() {
                     self.execute(*stmt.body.clone());
                 }
             }
@@ -61,10 +108,10 @@ impl Interpreter {
                         panic!("Undefined variable: {}", name);
                     }
 
-                    let value = value.evaluate();
-                    self.environment.define(name, value);
+                    let value = self.evaluate(*value);
+                    self.environment.assign(name.as_str(), value);
                 }
-                _ => {}
+                _ => unimplemented!(),
             },
         }
     }
@@ -78,6 +125,7 @@ impl Interpreter {
 
 #[cfg(test)]
 mod tests {
+
     use crate::parser::{expression::Expression, ident::Ident};
 
     use super::*;

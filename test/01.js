@@ -1,3 +1,3 @@
-let a = 1;
-
-print a;
+for (let i = 0; i < 10; i = i + 1) {
+		print i;
+}

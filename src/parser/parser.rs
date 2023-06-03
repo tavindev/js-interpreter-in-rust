@@ -10,9 +10,9 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(input: String) -> Parser {
+    pub fn new<S: Into<String>>(input: S) -> Parser {
         Parser {
-            lexer: Lexer::new(input),
+            lexer: Lexer::new(input.into()),
         }
     }
 
