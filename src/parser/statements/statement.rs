@@ -1,11 +1,14 @@
 use crate::parser::{expression::Expression, ident::Ident};
 
-use super::{block::BlockStatement, r#if::IfStatement, r#let::LetStatement};
+use super::{
+    block::BlockStatement, r#if::IfStatement, r#let::LetStatement, r#while::WhileStatement,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(LetStatement),
     If(IfStatement),
+    While(WhileStatement),
     Block(BlockStatement),
     Expression(Expression),
 }
@@ -28,6 +31,13 @@ impl Statement {
             condition,
             consequence: Box::new(consequence),
             alternative: alternative.map(Box::new),
+        })
+    }
+
+    pub fn _while(condition: Expression, body: Statement) -> Self {
+        Self::While(WhileStatement {
+            condition,
+            body: Box::new(body),
         })
     }
 

@@ -41,6 +41,13 @@ impl Interpreter {
                     self.execute(*alternative);
                 }
             }
+            Statement::While(stmt) => {
+                let condition = stmt.condition.evaluate();
+
+                while condition.is_truthy() {
+                    self.execute(*stmt.body.clone());
+                }
+            }
             Statement::Block(stmt) => {
                 for statement in stmt.statements() {
                     self.execute(statement.clone());

@@ -75,7 +75,57 @@ impl Parser {
     }
 
     /**
-     * statement -> exprStmt | ifStmt | printStmt | block ;
+     * if -> "if" "(" expression ")" statement ( "else" statement )? ;
+     */
+    fn if_statement(&mut self) -> Statement {
+        if self.lexer.next_token() != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        }
+
+        let condition = self.expression();
+
+        if self.lexer.next_token() != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        }
+
+        let consequence = self.statement();
+
+        let alternative = if self.lexer.match_token_and_consume(Token::Else) {
+            Some(self.statement())
+        } else {
+            None
+        };
+
+        return Statement::_if(condition, consequence, alternative);
+    }
+
+    fn expression_statement(&mut self) -> Statement {
+        let expression = self.expression();
+
+        return Statement::_expression(expression);
+    }
+
+    /**
+     * while -> "while" "(" expression ")" statement ;
+     */
+    fn while_statement(&mut self) -> Statement {
+        if self.lexer.next_token() != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        }
+
+        let condition = self.expression();
+
+        if self.lexer.next_token() != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        }
+
+        let body = self.statement();
+
+        return Statement::_while(condition, body);
+    }
+
+    /**
+     * statement -> expr | if | print | while | block ;
      */
     fn statement(&mut self) -> Statement {
         if self.lexer.match_token_and_consume(Token::If) {
@@ -84,6 +134,10 @@ impl Parser {
 
         if self.lexer.match_token_and_consume(Token::LSquirly) {
             return self.block();
+        }
+
+        if self.lexer.match_token_and_consume(Token::While) {
+            return self.while_statement();
         }
 
         return self.expression_statement();
@@ -305,37 +359,6 @@ impl Parser {
             Token::GreaterThanOrEqual => Operator::GreaterThanOrEqual,
             token => panic!("Expected an operator, got {:?}", token),
         }
-    }
-
-    /**
-     * if -> "if" "(" expression ")" statement ( "else" statement )? ;
-     */
-    fn if_statement(&mut self) -> Statement {
-        if self.lexer.next_token() != Token::Lparen {
-            panic!("Expected a left parenthesis");
-        }
-
-        let condition = self.expression();
-
-        if self.lexer.next_token() != Token::Rparen {
-            panic!("Expected a right parenthesis");
-        }
-
-        let consequence = self.statement();
-
-        let alternative = if self.lexer.match_token_and_consume(Token::Else) {
-            Some(self.statement())
-        } else {
-            None
-        };
-
-        return Statement::_if(condition, consequence, alternative);
-    }
-
-    fn expression_statement(&mut self) -> Statement {
-        let expression = self.expression();
-
-        return Statement::_expression(expression);
     }
 }
 
