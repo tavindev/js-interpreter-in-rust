@@ -16,6 +16,10 @@ impl Interpreter {
 
     fn execute(&mut self, statement: Statement) {
         match statement {
+            Statement::Print(stmt) => {
+                let value = stmt.evaluate();
+                println!("{:?}", value);
+            }
             Statement::Let(stmt) => {
                 let ident = stmt.ident.clone();
                 let name = ident.value();

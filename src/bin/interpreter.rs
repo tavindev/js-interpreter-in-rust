@@ -13,6 +13,7 @@ fn main() {
         stdin.read_line(&mut line).unwrap();
 
         let statements = Parser::new(line).parse();
+
         Interpreter::new(statements).run();
     }
 }

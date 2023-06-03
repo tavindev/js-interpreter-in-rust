@@ -3,6 +3,7 @@ pub enum Token {
     Ident(String),
     Number(String),
     String(String),
+    Print, // temporary
     Null,
     Illegal,
     Eof,
@@ -150,6 +151,7 @@ impl Lexer {
                     "true" => Token::True,
                     "false" => Token::False,
                     "null" => Token::Null,
+                    "print" => Token::Print, // temporary
                     _ => Token::Ident(ident),
                 };
             }

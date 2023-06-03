@@ -11,11 +11,16 @@ pub enum Statement {
     While(WhileStatement),
     Block(BlockStatement),
     Expression(Expression),
+    Print(Expression),
 }
 
 impl Statement {
     pub fn _let(ident: Ident, expression: Option<Expression>) -> Self {
         Self::Let(LetStatement { ident, expression })
+    }
+
+    pub fn print(expression: Expression) -> Self {
+        Self::Print(expression)
     }
 
     pub fn _if(

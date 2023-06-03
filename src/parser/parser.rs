@@ -24,6 +24,7 @@ impl Parser {
 
         while !self.lexer.is_at_end() {
             statements.push(self.declaration());
+            self.lexer.match_token_and_consume(Token::Semicolon);
         }
 
         return statements;
@@ -174,6 +175,17 @@ impl Parser {
     }
 
     /**
+     * print -> "print" expression ";" ;
+     */
+    fn print_statement(&mut self) -> Statement {
+        let expression = self.expression();
+
+        self.lexer.match_token_and_consume(Token::Semicolon);
+
+        return Statement::print(expression);
+    }
+
+    /**
      * statement -> expr | if | print | for | while | block ;
      */
     fn statement(&mut self) -> Statement {
@@ -191,6 +203,10 @@ impl Parser {
 
         if self.lexer.match_token_and_consume(Token::For) {
             return self.for_statement();
+        }
+
+        if self.lexer.match_token_and_consume(Token::Print) {
+            return self.print_statement();
         }
 
         return self.expression_statement();
@@ -417,8 +433,24 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
     use crate::{parser::expression::Expression, s};
+
+    #[test]
+    fn let_statement() {
+        let mut parser = Parser::new(s!("let a = 1;"));
+        let stmt = parser.parse();
+
+        assert_eq!(
+            stmt,
+            vec![Statement::_let(
+                Ident::new(s!("a")),
+                Some(Expression::literal(Value::Number(1.0)))
+            )]
+        );
+    }
 
     #[test]
     fn literal_expression() {
