@@ -1,9 +1,5 @@
 use super::environment::Environment;
-use crate::parser::{
-    expression::Expression,
-    statements::statement::Statement,
-    value::{self, Value},
-};
+use crate::parser::{expression::Expression, statements::statement::Statement, value::Value};
 
 pub struct Interpreter {
     statements: Vec<Statement>,

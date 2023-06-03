@@ -125,7 +125,56 @@ impl Parser {
     }
 
     /**
-     * statement -> expr | if | print | while | block ;
+     * for -> "for" "(" ( varDecl | expression | ";" ) expression? ";" expression? ")" statement ;
+     */
+    pub fn for_statement(&mut self) -> Statement {
+        if self.lexer.next_token() != Token::Lparen {
+            panic!("Expected a left parenthesis");
+        }
+
+        let initializer = match self.lexer.next_token() {
+            Token::Let => Some(self.var_decl()),
+            Token::Semicolon => None,
+            _ => Some(self.expression_statement()),
+        };
+
+        let condition = if self.lexer.peek_token() != Token::Semicolon {
+            self.expression()
+        } else {
+            Expression::Literal(Value::Bool(true))
+        };
+
+        if self.lexer.next_token() != Token::Semicolon {
+            panic!("Expected a semicolon");
+        };
+
+        let increment = if self.lexer.peek_token() != Token::Rparen {
+            Some(self.expression())
+        } else {
+            None
+        };
+
+        if self.lexer.next_token() != Token::Rparen {
+            panic!("Expected a right parenthesis");
+        };
+
+        let mut body = self.statement();
+
+        if let Some(increment) = increment {
+            body = Statement::_block(vec![body, Statement::_expression(increment)]);
+        }
+
+        body = Statement::_while(condition, body);
+
+        if let Some(initializer) = initializer {
+            body = Statement::_block(vec![initializer, body]);
+        }
+
+        return body;
+    }
+
+    /**
+     * statement -> expr | if | print | for | while | block ;
      */
     fn statement(&mut self) -> Statement {
         if self.lexer.match_token_and_consume(Token::If) {
@@ -138,6 +187,10 @@ impl Parser {
 
         if self.lexer.match_token_and_consume(Token::While) {
             return self.while_statement();
+        }
+
+        if self.lexer.match_token_and_consume(Token::For) {
+            return self.for_statement();
         }
 
         return self.expression_statement();

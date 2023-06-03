@@ -89,7 +89,7 @@ impl Expression {
                     _ => unimplemented!(),
                 }
             }
-            Expression::Variable(ident) => unimplemented!(),
+            Expression::Variable(_) => unimplemented!(),
         }
     }
 }
