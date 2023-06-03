@@ -9,16 +9,6 @@ pub struct Parser {
     lexer: Lexer,
 }
 
-/**
- * Expression grammar
- * expression -> equality ;
- * equality -> comparison ( ( "!=" | "==" ) comparison )* ;
- * comparison -> term ( ( ">" | ">=" | "<" | ">" ) term )* ;
- * term -> factor ( ( "-" | "+" ) factor )* ;
- * factor -> unary ( ( "/" | "*" ) unary )* ;
- * unary -> ( "!" | "-" ) unary | primary ;
- * primary -> NUMBER | STRING | "true" | "false" | null | "(" expression ")" ;
- */
 impl Parser {
     pub fn new(input: String) -> Parser {
         Parser {
