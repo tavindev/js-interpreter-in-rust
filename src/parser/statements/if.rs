@@ -1,6 +1,6 @@
 use crate::parser::expression::Expression;
 
-use super::{block::BlockStatement, statement::Statement};
+use super::statement::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement {

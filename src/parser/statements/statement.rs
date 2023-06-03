@@ -20,6 +20,10 @@ impl Statement {
         consequence: Statement,
         alternative: Option<Statement>,
     ) -> Self {
+        if let Statement::Let(_) = consequence {
+            panic!("consequence cannot be a let statement")
+        }
+
         Self::If(IfStatement {
             condition,
             consequence: Box::new(consequence),
@@ -33,5 +37,26 @@ impl Statement {
 
     pub fn _expression(expression: Expression) -> Self {
         Self::Expression(expression)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::value::Value;
+
+    use super::*;
+
+    fn expression() -> Expression {
+        return Expression::assignement(Ident::new("x"), Expression::literal(Value::number(1)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_if_with_let() {
+        Statement::_if(
+            expression(),
+            Statement::_let(Ident::new("x"), Some(expression())),
+            None,
+        );
     }
 }

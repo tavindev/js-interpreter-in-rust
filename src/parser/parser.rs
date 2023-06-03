@@ -67,25 +67,36 @@ impl Parser {
     }
 
     /**
-     * statement -> exprStmt | printStmt ;
+     * block -> "{" declaration* "}" ;
+     */
+    fn block(&mut self) -> Statement {
+        let mut statements = Vec::new();
+
+        while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
+            statements.push(self.declaration());
+            self.lexer.match_token_and_consume(Token::Semicolon);
+        }
+
+        if self.lexer.next_token() != Token::RSquirly {
+            panic!("Expected a right brace");
+        }
+
+        return Statement::_block(statements);
+    }
+
+    /**
+     * statement -> exprStmt | printStmt | block ;
      */
     fn statement(&mut self) -> Statement {
-        // repeating, yes, but expression_statement should not consume first token
-        let statement = match self.lexer.peek_token() {
-            Token::If => {
-                self.lexer.next_token();
+        if self.lexer.match_token_and_consume(Token::If) {
+            return self.if_statement();
+        }
 
-                self.if_statement()
-            }
-            Token::LSquirly => {
-                self.lexer.next_token();
+        if self.lexer.match_token_and_consume(Token::LSquirly) {
+            return self.block();
+        }
 
-                self.block_statement()
-            }
-            _ => return self.expression_statement(),
-        };
-
-        return statement;
+        return self.expression_statement();
     }
 
     /**
@@ -289,14 +300,14 @@ impl Parser {
             panic!("Expected a left brace");
         }
 
-        let consequence = self.block_statement();
+        let consequence = self.block();
 
         let alternative = if self.lexer.match_token_and_consume(Token::Else) {
             if self.lexer.next_token() != Token::LSquirly {
                 panic!("Expected a left brace");
             }
 
-            let alternative = self.block_statement();
+            let alternative = self.block();
 
             Some(alternative)
         } else {
@@ -310,21 +321,6 @@ impl Parser {
         let expression = self.expression();
 
         return Statement::_expression(expression);
-    }
-
-    fn block_statement(&mut self) -> Statement {
-        let mut statements = Vec::new();
-
-        while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
-            statements.push(self.statement());
-            self.lexer.match_token_and_consume(Token::Semicolon);
-        }
-
-        if self.lexer.next_token() != Token::RSquirly {
-            panic!("Expected a right brace");
-        }
-
-        return Statement::_block(statements);
     }
 }
 

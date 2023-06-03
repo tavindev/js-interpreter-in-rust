@@ -20,6 +20,22 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
+    pub fn number<T: Into<f64>>(number: T) -> Self {
+        Value::Number(number.into())
+    }
+
+    pub fn string<T: Into<String>>(string: T) -> Self {
+        Value::String(string.into())
+    }
+
+    pub fn bool<T: Into<bool>>(bool: T) -> Self {
+        Value::Bool(bool.into())
+    }
+
+    pub fn null() -> Self {
+        Value::Null
+    }
+
     pub fn to_number(&self) -> f64 {
         match self {
             Value::Number(number) => *number,
