@@ -68,9 +68,7 @@ impl Parser {
             self.lexer.match_token_and_consume(Token::Semicolon);
         }
 
-        if self.lexer.next_token() != Token::RSquirly {
-            panic!("Expected a right brace");
-        }
+        self.expect(Token::RSquirly, "Expected a right brace");
 
         return Statement::_block(statements);
     }
@@ -79,15 +77,11 @@ impl Parser {
      * if -> "if" "(" expression ")" statement ( "else" statement )? ;
      */
     fn if_statement(&mut self) -> Statement {
-        if self.lexer.next_token() != Token::Lparen {
-            panic!("Expected a left parenthesis");
-        }
+        self.expect(Token::Lparen, "Expected a left parenthesis");
 
         let condition = self.expression();
 
-        if self.lexer.next_token() != Token::Rparen {
-            panic!("Expected a right parenthesis");
-        }
+        self.expect(Token::Rparen, "Expected a right parenthesis");
 
         let consequence = self.statement();
 
@@ -110,15 +104,11 @@ impl Parser {
      * while -> "while" "(" expression ")" statement ;
      */
     fn while_statement(&mut self) -> Statement {
-        if self.lexer.next_token() != Token::Lparen {
-            panic!("Expected a left parenthesis");
-        }
+        self.expect(Token::Lparen, "Expected a left parenthesis");
 
         let condition = self.expression();
 
-        if self.lexer.next_token() != Token::Rparen {
-            panic!("Expected a right parenthesis");
-        }
+        self.expect(Token::Rparen, "Expected a right parenthesis");
 
         let body = self.statement();
 
@@ -129,9 +119,7 @@ impl Parser {
      * for -> "for" "(" ( varDecl | expression | ";" ) expression? ";" expression? ")" statement ;
      */
     pub fn for_statement(&mut self) -> Statement {
-        if self.lexer.next_token() != Token::Lparen {
-            panic!("Expected a left parenthesis");
-        }
+        self.expect(Token::Lparen, "Expected a left parenthesis");
 
         let initializer = match self.lexer.next_token() {
             Token::Let => Some(self.var_decl()),
@@ -145,9 +133,7 @@ impl Parser {
             Expression::Literal(Value::Bool(true))
         };
 
-        if self.lexer.next_token() != Token::Semicolon {
-            panic!("Expected a semicolon");
-        };
+        self.expect(Token::Semicolon, "Expected a semicolon");
 
         let increment = if self.lexer.peek_token() != Token::Rparen {
             Some(self.expression())
@@ -155,9 +141,7 @@ impl Parser {
             None
         };
 
-        if self.lexer.next_token() != Token::Rparen {
-            panic!("Expected a right parenthesis");
-        };
+        self.expect(Token::Rparen, "Expected a right parenthesis");
 
         let mut body = self.statement();
 
@@ -218,9 +202,9 @@ impl Parser {
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
             Token::Ident(ident) => Expression::Variable(Ident::new(ident)),
-            Token::Number(int) => {
-                Expression::Literal(Value::Number(int.parse().expect("Expected a number")))
-            }
+            Token::Number(int) => Expression::Literal(Value::number(
+                int.parse::<f64>().expect("Expected a number"),
+            )),
             Token::String(string) => Expression::Literal(Value::String(string)),
             Token::True => Expression::Literal(Value::Bool(true)),
             Token::False => Expression::Literal(Value::Bool(false)),
@@ -228,9 +212,7 @@ impl Parser {
             Token::Lparen => {
                 let expr = self.expression();
 
-                if self.lexer.next_token() != Token::Rparen {
-                    panic!("Expected a closing parenthesis");
-                }
+                self.expect(Token::Rparen, "Expected a closing parenthesis");
 
                 Expression::grouping(expr)
             }
@@ -429,6 +411,12 @@ impl Parser {
             token => panic!("Expected an operator, got {:?}", token),
         }
     }
+
+    fn expect(&mut self, token: Token, message: &str) {
+        if !self.lexer.match_token_and_consume(token) {
+            panic!("{}", message);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -447,7 +435,7 @@ mod tests {
             stmt,
             vec![Statement::_let(
                 Ident::new(s!("a")),
-                Some(Expression::literal(Value::Number(1.0)))
+                Some(Expression::literal(Value::number(1.0)))
             )]
         );
     }
@@ -457,7 +445,7 @@ mod tests {
         let mut parser = Parser::new(s!("1;"));
         let expr = parser.expression();
 
-        assert_eq!(expr, Expression::literal(Value::Number(1.0)));
+        assert_eq!(expr, Expression::literal(Value::number(1.0)));
     }
 
     #[test]
@@ -468,9 +456,9 @@ mod tests {
         assert_eq!(
             expr,
             Expression::binary(
-                Expression::literal(Value::Number(1.0)),
+                Expression::literal(Value::number(1.0)),
                 Operator::Plus,
-                Expression::literal(Value::Number(2.0)),
+                Expression::literal(Value::number(2.0)),
             )
         );
     }
@@ -483,9 +471,9 @@ mod tests {
         assert_eq!(
             expr,
             Expression::grouping(Expression::binary(
-                Expression::literal(Value::Number(1.0)),
+                Expression::literal(Value::number(1.0)),
                 Operator::Plus,
-                Expression::literal(Value::Number(2.0)),
+                Expression::literal(Value::number(2.0)),
             ))
         );
     }
@@ -530,7 +518,7 @@ mod tests {
                 Expression::grouping(Expression::binary(
                     Expression::unary(Operator::Bang, Expression::literal(Value::Bool(true))),
                     Operator::Plus,
-                    Expression::literal(Value::Number(1.0)),
+                    Expression::literal(Value::number(1.0)),
                 ))
             )
         );
@@ -544,12 +532,12 @@ mod tests {
         assert_eq!(
             expr,
             Expression::binary(
-                Expression::literal(Value::Number(1.0)),
+                Expression::literal(Value::number(1.0)),
                 Operator::Plus,
                 Expression::binary(
-                    Expression::literal(Value::Number(2.0)),
+                    Expression::literal(Value::number(2.0)),
                     Operator::Asterisk,
-                    Expression::literal(Value::Number(3.0)),
+                    Expression::literal(Value::number(3.0)),
                 ),
             )
         );
@@ -564,12 +552,12 @@ mod tests {
             expr,
             Expression::binary(
                 Expression::grouping(Expression::binary(
-                    Expression::literal(Value::Number(1.0)),
+                    Expression::literal(Value::number(1.0)),
                     Operator::Plus,
-                    Expression::literal(Value::Number(2.0)),
+                    Expression::literal(Value::number(2.0)),
                 )),
                 Operator::Asterisk,
-                Expression::literal(Value::Number(3.0)),
+                Expression::literal(Value::number(3.0)),
             )
         );
     }
@@ -597,7 +585,7 @@ mod tests {
                 stmt,
                 Statement::_let(
                     Ident::new("a"),
-                    Some(Expression::Literal(Value::Number(1.0))),
+                    Some(Expression::Literal(Value::number(1.0))),
                 )
             );
         }
@@ -611,7 +599,7 @@ mod tests {
     //     assert_eq!(
     //         stmt,
     //         Statement::Return(ReturnStatement {
-    //             expression: Some(Expression::Literal(Value::Number(1.0))),
+    //             expression: Some(Expression::Literal(Value::number(1.0))),
     //         })
     //     );
     // }
@@ -624,7 +612,7 @@ mod tests {
         for stmt in stmt {
             assert_eq!(
                 stmt,
-                Statement::Expression(Expression::Literal(Value::Number(1.0)))
+                Statement::Expression(Expression::Literal(Value::number(1.0)))
             );
         }
     }
@@ -638,7 +626,7 @@ mod tests {
             assert_eq!(
                 stmt,
                 Statement::_block(vec![Statement::_expression(Expression::literal(
-                    Value::Number(1.0)
+                    Value::number(1.0)
                 ))])
             );
         }
@@ -665,7 +653,7 @@ mod tests {
                 Statement::_if(
                     Expression::Literal(Value::Bool(true)),
                     Statement::_block(vec![Statement::Expression(Expression::Literal(
-                        Value::Number(1.0)
+                        Value::number(1.0)
                     ))],),
                     None,
                 )
