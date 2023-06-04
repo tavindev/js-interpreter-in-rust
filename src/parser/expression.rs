@@ -18,6 +18,10 @@ pub enum Expression {
         operator: Operator,
         right: Box<Expression>,
     },
+    Call {
+        callee: Box<Expression>,
+        arguments: Vec<Expression>,
+    },
 }
 
 impl Expression {
@@ -27,6 +31,13 @@ impl Expression {
 
     pub fn literal(value: Value) -> Expression {
         Expression::Literal(value)
+    }
+
+    pub fn call(callee: Expression, arguments: Vec<Expression>) -> Expression {
+        Expression::Call {
+            callee: Box::new(callee),
+            arguments,
+        }
     }
 
     pub fn unary(operator: Operator, right: Expression) -> Expression {

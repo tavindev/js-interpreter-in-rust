@@ -221,7 +221,45 @@ impl Parser {
     }
 
     /**
-     * unary -> ( "!" | "-" ) unary | primary ;
+     * arguments -> expression ( "," expression )* ;
+     */
+
+    fn finish_call(&mut self, callee: Expression) -> Expression {
+        let mut arguments = Vec::new();
+
+        if self.lexer.peek_token() != Token::Rparen {
+            loop {
+                if arguments.len() >= 255 {
+                    panic!("Cannot have more than 255 arguments");
+                }
+
+                arguments.push(self.expression());
+
+                if !self.lexer.match_token_and_consume(Token::Comma) {
+                    break;
+                }
+            }
+        }
+
+        self.expect(Token::Rparen, "Expected a closing parenthesis");
+
+        return Expression::call(callee, arguments);
+    }
+    /**
+     * call -> primary ( "(" arguments? ")" )* ;
+     */
+    fn call(&mut self) -> Expression {
+        let mut expr = self.primary();
+
+        while self.lexer.match_token_and_consume(Token::Lparen) {
+            expr = self.finish_call(expr);
+        }
+
+        return expr;
+    }
+
+    /**
+     * unary -> ( "!" | "-" ) unary | call ;
      */
     fn unary(&mut self) -> Expression {
         match self.lexer.peek_token() {
@@ -232,7 +270,7 @@ impl Parser {
 
                 return Expression::unary(operator, right);
             }
-            _ => return self.primary(),
+            _ => return self.call(),
         }
     }
 

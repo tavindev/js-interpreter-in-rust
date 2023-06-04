@@ -60,6 +60,15 @@ impl Interpreter {
 
                 return self.environment.get(name).clone();
             }
+            Expression::Call { callee, arguments } => {
+                //     let callee = self.evaluate(*callee);
+
+                //     let arguments = arguments
+                //         .into_iter()
+                //         .map(|argument| self.evaluate(argument))
+                //         .collect::<Vec<Value>>();
+                todo!()
+            }
         }
     }
 
