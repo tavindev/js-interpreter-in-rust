@@ -126,45 +126,31 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
 
-    use crate::parser::{expression::Expression, ident::Ident};
+    use crate::parser::parser::Parser;
 
     use super::*;
 
-    #[test]
-    fn variable_declaration() {
-        let statements = vec![
-            Statement::_let(
-                Ident::new("x"),
-                Some(Expression::literal(Value::Number(1.0))),
-            ),
-            Statement::_let(Ident::new("y"), None),
-        ];
+    fn run_interpreter(code: &str) -> Interpreter {
+        let statements = Parser::new(code).parse();
 
         let mut interpreter = Interpreter::new(statements);
 
         interpreter.run();
 
-        assert_eq!(interpreter.environment.get("x"), &Value::Number(1.0));
+        interpreter
+    }
 
+    #[test]
+    fn variable_declaration() {
+        let interpreter = run_interpreter("let x = 1; let y;");
+
+        assert_eq!(interpreter.environment.get("x"), &Value::Number(1.0));
         assert_eq!(interpreter.environment.get("y"), &Value::Null);
     }
 
     #[test]
     fn variable_assignment() {
-        let statements = vec![
-            Statement::_let(
-                Ident::new("x"),
-                Some(Expression::literal(Value::Number(1.0))),
-            ),
-            Statement::_expression(Expression::assignement(
-                Ident::new("x"),
-                Expression::literal(Value::Number(2.0)),
-            )),
-        ];
-
-        let mut interpreter = Interpreter::new(statements);
-
-        interpreter.run();
+        let interpreter = run_interpreter("let x = 1; x = 2;");
 
         assert_eq!(interpreter.environment.get("x"), &Value::Number(2.0));
     }
@@ -172,36 +158,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Undefined variable: x")]
     fn variable_assignment_with_undefined_variable() {
-        let statements = vec![Statement::_expression(Expression::assignement(
-            Ident::new("x"),
-            Expression::literal(Value::Number(2.0)),
-        ))];
-
-        let mut interpreter = Interpreter::new(statements);
-
-        interpreter.run();
+        run_interpreter("x = 2;");
     }
 
     #[test]
     fn if_statement() {
-        let statements = vec![
-            Statement::_let(
-                Ident::new("x"),
-                Some(Expression::literal(Value::Number(1.0))),
-            ),
-            Statement::_if(
-                Expression::Literal(Value::Bool(true)),
-                Statement::_block(vec![Statement::_expression(Expression::assignement(
-                    Ident::new("x"),
-                    Expression::literal(Value::Number(2.0)),
-                ))]),
-                None,
-            ),
-        ];
-
-        let mut interpreter = Interpreter::new(statements);
-
-        interpreter.run();
+        let interpreter = run_interpreter("let x = 1; if (true) { x = 2; }");
 
         assert_eq!(interpreter.environment.get("x"), &Value::Number(2.0));
     }
