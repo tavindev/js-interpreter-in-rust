@@ -1,6 +1,17 @@
+use dyn_clone::DynClone;
+
 use crate::{interpreter::interpreter::Interpreter, parser::value::Value};
 
-pub trait Callable {
+pub trait Callable: DynClone {
+    fn name(&self) -> String;
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value;
     fn arity(&self) -> usize;
+}
+
+dyn_clone::clone_trait_object!(Callable);
+
+impl PartialEq for dyn Callable {
+    fn eq(&self, other: &Self) -> bool {
+        self.name() == other.name()
+    }
 }

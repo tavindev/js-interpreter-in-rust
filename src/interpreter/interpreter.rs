@@ -1,15 +1,9 @@
-use super::{
-    callable::Callable,
-    environment::{self, Environment},
-};
-use crate::{
-    interpreter::js_function::JsFunction,
-    parser::{
-        expression::Expression,
-        operator::Operator,
-        statements::{block::BlockStatement, function::FunctionStatement, statement::Statement},
-        value::Value,
-    },
+use super::{callable::Callable, environment::Environment};
+use crate::parser::{
+    expression::Expression,
+    operator::Operator,
+    statements::{block::BlockStatement, function::FunctionStatement, statement::Statement},
+    value::Value,
 };
 
 pub struct Interpreter {
@@ -107,8 +101,6 @@ impl Interpreter {
                     .collect::<Vec<Value>>();
 
                 if let Value::Function(function) = callee {
-                    let function = JsFunction::new(function);
-
                     if function.arity() != arguments.len() {
                         panic!(
                             "Expected {} arguments but got {}",

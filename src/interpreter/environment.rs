@@ -2,6 +2,11 @@ use std::collections::HashMap;
 
 use crate::parser::value::Value;
 
+use super::functions::{
+    implementations::{clock, random},
+    native_function::NativeFunction,
+};
+
 #[derive(Debug, Clone)]
 pub struct Environment {
     enclosing: Option<Box<Environment>>,
@@ -10,10 +15,14 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Environment {
-        Environment {
+        let mut env = Environment {
             enclosing: None,
             values: HashMap::new(),
-        }
+        };
+
+        define_native_functions(&mut env);
+
+        env
     }
 
     pub fn new_enclosing(enclosing: Environment) -> Environment {
@@ -23,8 +32,8 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: String, value: Value) {
-        self.values.insert(name, value);
+    pub fn define<S: Into<String>>(&mut self, name: S, value: Value) {
+        self.values.insert(name.into(), value);
     }
 
     pub fn get(&self, name: &str) -> &Value {
@@ -60,4 +69,28 @@ impl Environment {
     pub fn has(&self, name: &str) -> bool {
         self.values.contains_key(name)
     }
+}
+
+fn define_native_functions(env: &mut Environment) {
+    env.define(
+        "clock",
+        Value::Function(Box::new(NativeFunction {
+            name: "clock".to_string(),
+            arguments: vec![],
+            function: |_, _| {
+                return clock();
+            },
+        })),
+    );
+
+    env.define(
+        "random",
+        Value::Function(Box::new(NativeFunction {
+            name: "random".to_string(),
+            arguments: vec![],
+            function: |_, _| {
+                return random();
+            },
+        })),
+    );
 }

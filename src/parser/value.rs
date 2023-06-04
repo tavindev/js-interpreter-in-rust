@@ -1,14 +1,28 @@
 use core::fmt;
 
-use super::{function::Function, ident::Ident, statements::block::BlockStatement};
+use crate::interpreter::{callable::Callable, js_function::JsFunction};
 
-#[derive(Clone, PartialEq)]
+use super::{ident::Ident, statements::block::BlockStatement};
+
+#[derive(Clone)]
 pub enum Value {
-    Function(Function),
+    Function(Box<dyn Callable>),
     Number(f64),
     String(String),
     Bool(bool),
     Null,
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Number(number), Value::Number(other_number)) => number == other_number,
+            (Value::String(string), Value::String(other_string)) => string == other_string,
+            (Value::Bool(bool), Value::Bool(other_bool)) => bool == other_bool,
+            (Value::Null, Value::Null) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Debug for Value {
@@ -41,11 +55,7 @@ impl Value {
     }
 
     pub fn function(ident: Ident, parameters: Vec<Ident>, body: BlockStatement) -> Self {
-        Value::Function(Function {
-            ident,
-            parameters,
-            body,
-        })
+        Value::Function(Box::new(JsFunction::new(ident, parameters, body)))
     }
 
     pub fn to_number(&self) -> f64 {
