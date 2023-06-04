@@ -47,9 +47,63 @@ impl Parser {
     }
 
     /**
-     * declaration -> varDecl | statement ;
+     * parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
+     */
+    fn parameters(&mut self) -> Statement {
+        todo!()
+    }
+
+    /**
+     * function -> IDENTIFIER "(" parameters? ")" block ;
+     */
+    fn function(&mut self) -> Statement {
+        todo!()
+    }
+
+    /**
+     * functionDecl -> "function" function ;
+     */
+    fn function_decl(&mut self) -> Statement {
+        let name = self.parse_ident();
+
+        self.expect(Token::Lparen, "Expected a left parenthesis");
+
+        let mut params = Vec::new();
+
+        if self.lexer.peek_token() != Token::Rparen {
+            loop {
+                if params.len() >= 255 {
+                    panic!("Cannot have more than 255 parameters");
+                }
+
+                params.push(self.parse_ident());
+
+                if !self.lexer.match_token_and_consume(Token::Comma) {
+                    break;
+                }
+            }
+        }
+
+        self.expect(Token::Rparen, "Expected a right parenthesis");
+        self.expect(Token::LSquirly, "Expected a left brace");
+
+        let body = self.block_statement();
+
+        if let Statement::Block(block) = body {
+            return Statement::function(name, params, block);
+        }
+
+        panic!("Expected a block statement");
+    }
+
+    /**
+     * declaration -> functionDecl | varDecl | statement ;
      */
     fn declaration(&mut self) -> Statement {
+        if self.lexer.match_token_and_consume(Token::Function) {
+            return self.function_decl();
+        }
+
         if self.lexer.match_token_and_consume(Token::Let) {
             return self.var_decl();
         }
@@ -60,7 +114,7 @@ impl Parser {
     /**
      * block -> "{" declaration* "}" ;
      */
-    fn block(&mut self) -> Statement {
+    fn block_statement(&mut self) -> Statement {
         let mut statements = Vec::new();
 
         while self.lexer.peek_token() != Token::RSquirly && self.lexer.peek_token() != Token::Eof {
@@ -178,7 +232,7 @@ impl Parser {
         }
 
         if self.lexer.match_token_and_consume(Token::LSquirly) {
-            return self.block();
+            return self.block_statement();
         }
 
         if self.lexer.match_token_and_consume(Token::While) {
@@ -223,8 +277,7 @@ impl Parser {
     /**
      * arguments -> expression ( "," expression )* ;
      */
-
-    fn finish_call(&mut self, callee: Expression) -> Expression {
+    fn arguments(&mut self) -> Vec<Expression> {
         let mut arguments = Vec::new();
 
         if self.lexer.peek_token() != Token::Rparen {
@@ -241,10 +294,17 @@ impl Parser {
             }
         }
 
+        return arguments;
+    }
+
+    fn finish_call(&mut self, callee: Expression) -> Expression {
+        let arguments = self.arguments();
+
         self.expect(Token::Rparen, "Expected a closing parenthesis");
 
         return Expression::call(callee, arguments);
     }
+
     /**
      * call -> primary ( "(" arguments? ")" )* ;
      */
@@ -452,7 +512,7 @@ impl Parser {
 
     fn expect(&mut self, token: Token, message: &str) {
         if !self.lexer.match_token_and_consume(token) {
-            panic!("{}", message);
+            panic!("{}, got {:?}", message, self.lexer.next_token());
         }
     }
 }
@@ -462,7 +522,10 @@ mod tests {
     use std::vec;
 
     use super::*;
-    use crate::{parser::expression::Expression, s};
+    use crate::{
+        parser::{expression::Expression, statements::block::BlockStatement},
+        s,
+    };
 
     #[test]
     fn let_statement() {
@@ -694,6 +757,26 @@ mod tests {
                         Value::number(1.0)
                     ))],),
                     None,
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn function_statement() {
+        let mut parser = Parser::new(s!("function a() { let b = 1; }"));
+        let stmt = parser.parse();
+
+        for stmt in stmt {
+            assert_eq!(
+                stmt,
+                Statement::function(
+                    Ident::new("a"),
+                    vec![],
+                    BlockStatement::new(vec![Statement::_let(
+                        Ident::new("b"),
+                        Some(Expression::Literal(Value::number(1.0)))
+                    ),],),
                 )
             );
         }

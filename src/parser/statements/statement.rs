@@ -1,7 +1,8 @@
 use crate::parser::{expression::Expression, ident::Ident};
 
 use super::{
-    block::BlockStatement, r#if::IfStatement, r#let::LetStatement, r#while::WhileStatement,
+    block::BlockStatement, function::FunctionStatement, r#if::IfStatement, r#let::LetStatement,
+    r#while::WhileStatement,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,6 +13,7 @@ pub enum Statement {
     Block(BlockStatement),
     Expression(Expression),
     Print(Expression),
+    Function(FunctionStatement),
 }
 
 impl Statement {
@@ -21,6 +23,14 @@ impl Statement {
 
     pub fn print(expression: Expression) -> Self {
         Self::Print(expression)
+    }
+
+    pub fn function(ident: Ident, parameters: Vec<Ident>, body: BlockStatement) -> Self {
+        Self::Function(FunctionStatement {
+            ident,
+            parameters,
+            body,
+        })
     }
 
     pub fn _if(

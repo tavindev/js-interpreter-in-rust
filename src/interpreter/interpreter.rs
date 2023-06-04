@@ -1,6 +1,15 @@
-use super::environment::Environment;
-use crate::parser::{
-    expression::Expression, operator::Operator, statements::statement::Statement, value::Value,
+use super::{
+    callable::Callable,
+    environment::{self, Environment},
+};
+use crate::{
+    interpreter::js_function::JsFunction,
+    parser::{
+        expression::Expression,
+        operator::Operator,
+        statements::{block::BlockStatement, function::FunctionStatement, statement::Statement},
+        value::Value,
+    },
 };
 
 pub struct Interpreter {
@@ -16,9 +25,38 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&self, expr: Expression) -> Value {
+    pub fn get_globals(&self) -> &Environment {
+        &self.environment
+    }
+
+    pub fn execute_block(&mut self, block: BlockStatement, environment: Environment) -> Value {
+        let previous = self.environment.clone();
+
+        self.environment = environment;
+
+        for statement in block.statements() {
+            self.execute(statement.clone());
+        }
+
+        self.environment = previous;
+
+        return Value::Null;
+    }
+
+    pub fn evaluate(&mut self, expr: Expression) -> Value {
         match expr {
-            Expression::Assignement { ident: _, value } => self.evaluate(*value),
+            Expression::Assignement { ident, value } => {
+                let name = ident.value();
+
+                if !self.environment.has(&name) {
+                    panic!("Undefined variable: {}", name);
+                }
+
+                let value = self.evaluate(*value);
+                self.environment.assign(name.as_str(), value.clone());
+
+                return value;
+            }
             Expression::Binary {
                 left,
                 operator,
@@ -61,13 +99,28 @@ impl Interpreter {
                 return self.environment.get(name).clone();
             }
             Expression::Call { callee, arguments } => {
-                //     let callee = self.evaluate(*callee);
+                let callee = self.evaluate(*callee);
 
-                //     let arguments = arguments
-                //         .into_iter()
-                //         .map(|argument| self.evaluate(argument))
-                //         .collect::<Vec<Value>>();
-                todo!()
+                let arguments = arguments
+                    .into_iter()
+                    .map(|argument| self.evaluate(argument))
+                    .collect::<Vec<Value>>();
+
+                if let Value::Function(function) = callee {
+                    let function = JsFunction::new(function);
+
+                    if function.arity() != arguments.len() {
+                        panic!(
+                            "Expected {} arguments but got {}",
+                            function.arity(),
+                            arguments.len()
+                        );
+                    }
+
+                    function.call(self, arguments)
+                } else {
+                    panic!("Can only call functions and classes");
+                }
             }
         }
     }
@@ -109,19 +162,19 @@ impl Interpreter {
                     self.execute(statement.clone());
                 }
             }
-            Statement::Expression(stmt) => match stmt {
-                Expression::Assignement { ident, value } => {
-                    let name = ident.clone().value();
+            Statement::Expression(stmt) => {
+                self.evaluate(stmt);
+            }
+            Statement::Function(FunctionStatement {
+                ident,
+                body,
+                parameters,
+            }) => {
+                let name = ident.clone().value();
+                let function = Value::function(ident, parameters, body);
 
-                    if !self.environment.has(&name) {
-                        panic!("Undefined variable: {}", name);
-                    }
-
-                    let value = self.evaluate(*value);
-                    self.environment.assign(name.as_str(), value);
-                }
-                _ => unimplemented!(),
-            },
+                self.environment.define(name, function);
+            }
         }
     }
 

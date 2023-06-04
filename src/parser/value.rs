@@ -1,7 +1,10 @@
 use core::fmt;
 
+use super::{function::Function, ident::Ident, statements::block::BlockStatement};
+
 #[derive(Clone, PartialEq)]
 pub enum Value {
+    Function(Function),
     Number(f64),
     String(String),
     Bool(bool),
@@ -15,6 +18,7 @@ impl fmt::Debug for Value {
             Value::String(string) => write!(f, "{}", string),
             Value::Bool(bool) => write!(f, "{}", bool),
             Value::Null => write!(f, "null"),
+            Value::Function(_) => write!(f, "<function>"),
         }
     }
 }
@@ -34,6 +38,14 @@ impl Value {
 
     pub fn null() -> Self {
         Value::Null
+    }
+
+    pub fn function(ident: Ident, parameters: Vec<Ident>, body: BlockStatement) -> Self {
+        Value::Function(Function {
+            ident,
+            parameters,
+            body,
+        })
     }
 
     pub fn to_number(&self) -> f64 {
