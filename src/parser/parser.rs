@@ -49,16 +49,16 @@ impl Parser {
     /**
      * parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
      */
-    fn parameters(&mut self) -> Statement {
-        todo!()
-    }
+    // fn parameters(&mut self) -> Statement {
+    //     todo!()
+    // }
 
     /**
      * function -> IDENTIFIER "(" parameters? ")" block ;
      */
-    fn function(&mut self) -> Statement {
-        todo!()
-    }
+    // fn function(&mut self) -> Statement {
+    //     todo!()
+    // }
 
     /**
      * functionDecl -> "function" function ;

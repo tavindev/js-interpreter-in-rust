@@ -1,10 +1,3 @@
-function printNumber(i) {
-	print i * 2;
-}
+let a = random();
 
-for (let i = 0; i < 10; i = i + 1) {
-	printNumber(i);
-}
-
-print clock();
-print random();
+print(a + 2) * 5;

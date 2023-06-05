@@ -1,9 +1,7 @@
 use crate::{
-    interpreter::environment::Environment,
+    interpreter::{callable::Callable, environment::Environment, interpreter::Interpreter},
     parser::{ident::Ident, statements::block::BlockStatement, value::Value},
 };
-
-use super::{callable::Callable, interpreter::Interpreter};
 
 #[derive(Debug, Clone)]
 pub struct JsFunction {

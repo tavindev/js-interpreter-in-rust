@@ -1,12 +1,12 @@
 use crate::{
     interpreter::{callable::Callable, interpreter::Interpreter},
-    parser::value::Value,
+    parser::{ident::Ident, value::Value},
 };
 
 #[derive(Clone)]
 pub struct NativeFunction {
     pub name: String,
-    pub arguments: Vec<Value>,
+    pub arguments: Vec<Ident>,
     pub function: fn(&mut Interpreter, Vec<Value>) -> Value,
 }
 

@@ -1,4 +1,4 @@
-use super::{callable::Callable, environment::Environment};
+use super::environment::Environment;
 use crate::parser::{
     expression::Expression,
     operator::Operator,

@@ -12,7 +12,5 @@ pub fn clock() -> Value {
 }
 
 pub fn random() -> Value {
-    let mut rng = thread_rng();
-
-    Value::number(rng.gen_range(0.0..1.0))
+    Value::Number(thread_rng().gen_range(0.0..1.0))
 }

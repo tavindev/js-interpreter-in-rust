@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::interpreter::{callable::Callable, js_function::JsFunction};
+use crate::interpreter::{callable::Callable, functions::js_function::JsFunction};
 
 use super::{ident::Ident, statements::block::BlockStatement};
 
