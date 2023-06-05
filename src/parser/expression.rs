@@ -61,6 +61,10 @@ impl Expression {
             value: Box::new(value),
         }
     }
+
+    pub fn variable(ident: Ident) -> Expression {
+        Expression::Variable(ident)
+    }
 }
 
 #[cfg(test)]

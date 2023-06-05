@@ -14,6 +14,7 @@ pub enum Statement {
     Expression(Expression),
     Print(Expression),
     Function(FunctionStatement),
+    Return(Expression),
 }
 
 impl Statement {
@@ -31,6 +32,10 @@ impl Statement {
             parameters,
             body,
         })
+    }
+
+    pub fn _return(expression: Expression) -> Self {
+        Self::Return(expression)
     }
 
     pub fn _if(

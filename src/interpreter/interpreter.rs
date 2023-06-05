@@ -24,17 +24,21 @@ impl Interpreter {
     }
 
     pub fn execute_block(&mut self, block: BlockStatement, environment: Environment) -> Value {
+        let mut return_value = Value::Null;
         let previous = self.environment.clone();
 
         self.environment = environment;
 
         for statement in block.statements() {
-            self.execute(statement.clone());
+            if let Some(value) = self.execute(statement.clone()) {
+                return_value = value;
+                break;
+            }
         }
 
         self.environment = previous;
 
-        return Value::Null;
+        return return_value;
     }
 
     pub fn evaluate(&mut self, expr: Expression) -> Value {
@@ -95,12 +99,12 @@ impl Interpreter {
             Expression::Call { callee, arguments } => {
                 let callee = self.evaluate(*callee);
 
-                let arguments = arguments
-                    .into_iter()
-                    .map(|argument| self.evaluate(argument))
-                    .collect::<Vec<Value>>();
-
                 if let Value::Function(function) = callee {
+                    let arguments = arguments
+                        .into_iter()
+                        .map(|argument| self.evaluate(argument))
+                        .collect::<Vec<Value>>();
+
                     if function.arity() != arguments.len() {
                         panic!(
                             "Expected {} arguments but got {}",
@@ -109,7 +113,7 @@ impl Interpreter {
                         );
                     }
 
-                    function.call(self, arguments)
+                    return function.call(self, arguments);
                 } else {
                     panic!("Can only call functions and classes");
                 }
@@ -117,7 +121,7 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, statement: Statement) {
+    fn execute(&mut self, statement: Statement) -> Option<Value> {
         match statement {
             Statement::Print(stmt) => {
                 let value = self.evaluate(stmt);
@@ -127,13 +131,15 @@ impl Interpreter {
                 let ident = stmt.ident.clone();
                 let name = ident.value();
 
-                if let Some(expression) = stmt.expression {
+                return if let Some(expression) = stmt.expression {
                     let value = self.evaluate(expression);
 
-                    self.environment.define(name, value);
+                    self.environment.define(name, value.clone());
+                    Some(value)
                 } else {
                     self.environment.define(name, Value::Null);
-                }
+                    None
+                };
             }
             Statement::If(stmt) => {
                 let condition = self.evaluate(stmt.condition);
@@ -155,7 +161,7 @@ impl Interpreter {
                 }
             }
             Statement::Expression(stmt) => {
-                self.evaluate(stmt);
+                return Some(self.evaluate(stmt));
             }
             Statement::Function(FunctionStatement {
                 ident,
@@ -167,7 +173,12 @@ impl Interpreter {
 
                 self.environment.define(name, function);
             }
+            Statement::Return(value) => {
+                return Some(self.evaluate(value));
+            }
         }
+
+        None
     }
 
     pub fn run(&mut self) {
@@ -220,5 +231,18 @@ mod tests {
         let interpreter = run_interpreter("let x = 1; if (true) { x = 2; }");
 
         assert_eq!(interpreter.environment.get("x"), &Value::Number(2.0));
+    }
+
+    #[test]
+    fn function_return_value() {
+        let interpreter = run_interpreter(
+            "function foo() {
+                return 1;
+            }
+            
+            let a = foo();",
+        );
+
+        assert_eq!(interpreter.environment.get("a"), &Value::Number(1.0));
     }
 }

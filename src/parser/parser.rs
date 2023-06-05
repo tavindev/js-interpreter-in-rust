@@ -5,6 +5,11 @@ use crate::{
 
 use super::{expression::Expression, ident::Ident, statements::statement::Statement, value::Value};
 
+enum FunctionType {
+    Function,
+    // Method,
+}
+
 pub struct Parser {
     lexer: Lexer,
 }
@@ -47,23 +52,11 @@ impl Parser {
     }
 
     /**
+     * functionDecl -> "function" function ;
+     * function -> IDENTIFIER "(" parameters? ")" block ;
      * parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
      */
-    // fn parameters(&mut self) -> Statement {
-    //     todo!()
-    // }
-
-    /**
-     * function -> IDENTIFIER "(" parameters? ")" block ;
-     */
-    // fn function(&mut self) -> Statement {
-    //     todo!()
-    // }
-
-    /**
-     * functionDecl -> "function" function ;
-     */
-    fn function_decl(&mut self) -> Statement {
+    fn function_decl(&mut self, _fn_type: FunctionType) -> Statement {
         let name = self.parse_ident();
 
         self.expect(Token::Lparen, "Expected a left parenthesis");
@@ -101,7 +94,7 @@ impl Parser {
      */
     fn declaration(&mut self) -> Statement {
         if self.lexer.match_token_and_consume(Token::Function) {
-            return self.function_decl();
+            return self.function_decl(FunctionType::Function);
         }
 
         if self.lexer.match_token_and_consume(Token::Let) {
@@ -224,7 +217,22 @@ impl Parser {
     }
 
     /**
-     * statement -> expr | if | print | for | while | block ;
+     * return -> "return" expression? ";" ;
+     */
+    fn return_statement(&mut self) -> Statement {
+        let value;
+
+        if self.lexer.peek_token() != Token::Semicolon {
+            value = self.expression();
+        } else {
+            value = Expression::Literal(Value::Null);
+        }
+
+        return Statement::_return(value);
+    }
+
+    /**
+     * statement -> expr | if | print | for | while | return | block ;
      */
     fn statement(&mut self) -> Statement {
         if self.lexer.match_token_and_consume(Token::If) {
@@ -245,6 +253,10 @@ impl Parser {
 
         if self.lexer.match_token_and_consume(Token::Print) {
             return self.print_statement();
+        }
+
+        if self.lexer.match_token_and_consume(Token::Return) {
+            return self.return_statement();
         }
 
         return self.expression_statement();
@@ -803,4 +815,18 @@ mod tests {
     //         );
     //     }
     // }
+
+    #[test]
+    fn return_statement() {
+        let mut parser = Parser::new(s!("return 1; return; return a;"));
+        let stmt = parser.parse();
+
+        let expected = vec![
+            Statement::_return(Expression::literal(Value::number(1.0))),
+            Statement::_return(Expression::literal(Value::Null)),
+            Statement::_return(Expression::variable(Ident::new("a"))),
+        ];
+
+        assert_eq!(stmt, expected);
+    }
 }

@@ -1,3 +1,7 @@
-let a = random();
+function add(a, b) {
+	return a + b;
+}
 
-print(a + 2) * 5;
+let result = add(10, 20);
+
+print result;
