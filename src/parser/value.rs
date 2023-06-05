@@ -32,7 +32,7 @@ impl fmt::Debug for Value {
             Value::String(string) => write!(f, "{}", string),
             Value::Bool(bool) => write!(f, "{}", bool),
             Value::Null => write!(f, "null"),
-            Value::Function(_) => write!(f, "<function>"),
+            Value::Function(function) => write!(f, "<function {}>", function.name()),
         }
     }
 }
