@@ -19,10 +19,6 @@ impl Interpreter {
         }
     }
 
-    pub fn get_globals(&self) -> &Environment {
-        &self.environment
-    }
-
     pub fn execute_block(&mut self, block: BlockStatement, environment: Environment) -> Value {
         let mut return_value = Value::Null;
         let previous = self.environment.clone();
@@ -30,7 +26,7 @@ impl Interpreter {
         self.environment = environment;
 
         for statement in block.statements() {
-            if let Some(value) = self.execute(statement.clone()) {
+            if let Some(value) = self.execute(statement) {
                 return_value = value;
                 break;
             }
@@ -41,7 +37,7 @@ impl Interpreter {
         return return_value;
     }
 
-    pub fn evaluate(&mut self, expr: Expression) -> Value {
+    pub fn evaluate(&mut self, expr: &Expression) -> Value {
         match expr {
             Expression::Assignement { ident, value } => {
                 let name = ident.value();
@@ -50,8 +46,8 @@ impl Interpreter {
                     panic!("Undefined variable: {}", name);
                 }
 
-                let value = self.evaluate(*value);
-                self.environment.assign(name.as_str(), value.clone());
+                let value = self.evaluate(value);
+                self.environment.assign(&name, value.clone());
 
                 return value;
             }
@@ -60,8 +56,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.evaluate(*left);
-                let right = self.evaluate(*right);
+                let left = self.evaluate(&left);
+                let right = self.evaluate(&right);
 
                 match operator {
                     Operator::Plus => left.sum(&right),
@@ -79,10 +75,10 @@ impl Interpreter {
                     _ => unimplemented!(),
                 }
             }
-            Expression::Grouping(expression) => self.evaluate(*expression),
+            Expression::Grouping(expression) => self.evaluate(&expression),
             Expression::Literal(value) => value.clone(),
             Expression::Unary { operator, right } => {
-                let right = self.evaluate(*right);
+                let right = self.evaluate(&right);
 
                 match operator {
                     Operator::Minus => Value::Number(-right.to_number()),
@@ -91,13 +87,12 @@ impl Interpreter {
                 }
             }
             Expression::Variable(ident) => {
-                let ident_value = ident.value();
-                let name = ident_value.as_str();
+                let name = ident.value();
 
-                return self.environment.get(name).clone();
+                return self.environment.get(&name).clone();
             }
             Expression::Call { callee, arguments } => {
-                let callee = self.evaluate(*callee);
+                let callee = self.evaluate(callee);
 
                 if let Value::Function(function) = callee {
                     let arguments = arguments
@@ -121,7 +116,7 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, statement: Statement) -> Option<Value> {
+    fn execute(&mut self, statement: &Statement) -> Option<Value> {
         match statement {
             Statement::Print(stmt) => {
                 let value = self.evaluate(stmt);
@@ -131,8 +126,8 @@ impl Interpreter {
                 let ident = stmt.ident.clone();
                 let name = ident.value();
 
-                if let Some(expression) = stmt.expression {
-                    let value = self.evaluate(expression);
+                if let Some(expression) = &stmt.expression {
+                    let value = self.evaluate(&expression);
 
                     self.environment.define(name, value.clone());
                 } else {
@@ -140,22 +135,22 @@ impl Interpreter {
                 };
             }
             Statement::If(stmt) => {
-                let condition = self.evaluate(stmt.condition);
+                let condition = self.evaluate(&stmt.condition);
 
                 if condition.is_truthy() {
-                    self.execute(*stmt.consequence);
-                } else if let Some(alternative) = stmt.alternative {
-                    self.execute(*alternative);
+                    self.execute(&stmt.consequence);
+                } else if let Some(alternative) = &stmt.alternative {
+                    self.execute(&alternative);
                 }
             }
             Statement::While(stmt) => {
-                while self.evaluate(stmt.condition.clone()).is_truthy() {
-                    self.execute(*stmt.body.clone());
+                while self.evaluate(&stmt.condition).is_truthy() {
+                    self.execute(&stmt.body);
                 }
             }
             Statement::Block(stmt) => {
                 for statement in stmt.statements() {
-                    self.execute(statement.clone());
+                    self.execute(statement);
                 }
             }
             Statement::Expression(stmt) => {
@@ -168,9 +163,9 @@ impl Interpreter {
             }) => {
                 let name = ident.clone().value();
                 let function = Value::function(JsFunction::new(
-                    ident,
-                    parameters,
-                    body,
+                    ident.clone(),
+                    parameters.clone(),
+                    body.clone(),
                     self.environment.clone(),
                 ));
 
@@ -185,8 +180,10 @@ impl Interpreter {
     }
 
     pub fn run(&mut self) {
-        for statement in self.statements.clone() {
-            self.execute(statement);
+        let statements = self.statements.clone();
+
+        for statement in statements {
+            self.execute(&statement);
         }
     }
 }

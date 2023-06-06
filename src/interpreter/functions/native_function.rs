@@ -5,9 +5,23 @@ use crate::{
 
 #[derive(Clone)]
 pub struct NativeFunction {
-    pub name: String,
-    pub arguments: Vec<Ident>,
-    pub function: fn(&mut Interpreter, Vec<Value>) -> Value,
+    name: String,
+    arguments: Vec<Ident>,
+    function: fn(&mut Interpreter, Vec<Value>) -> Value,
+}
+
+impl NativeFunction {
+    pub fn new<S: Into<String>>(
+        name: S,
+        arguments: Vec<Ident>,
+        function: fn(&mut Interpreter, Vec<Value>) -> Value,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            arguments,
+            function,
+        }
+    }
 }
 
 impl Callable for NativeFunction {

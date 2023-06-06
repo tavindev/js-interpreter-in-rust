@@ -40,6 +40,20 @@ pub enum Token {
     Newline,
 }
 
+impl Token {
+    pub fn string<S: Into<String>>(string: S) -> Self {
+        Token::String(string.into())
+    }
+
+    pub fn number<S: Into<String>>(number: S) -> Self {
+        Token::Number(number.into())
+    }
+
+    pub fn ident<S: Into<String>>(ident: S) -> Self {
+        Token::Ident(ident.into())
+    }
+}
+
 pub struct Lexer {
     position: usize,
     read_position: usize,
@@ -288,9 +302,9 @@ mod test {
 
         let tokens = vec![
             Token::Let,
-            Token::Ident(String::from("s")),
+            Token::ident("s"),
             Token::Assign,
-            Token::String(String::from("hello world")),
+            Token::string("hello world"),
             Token::Semicolon,
         ];
 
@@ -306,7 +320,7 @@ mod test {
         let input = r#"123;"#;
         let mut lex = Lexer::new(input.into());
 
-        assert_eq!(lex.next_token(), Token::Number("123".into()));
+        assert_eq!(lex.next_token(), Token::number("123"));
         assert_eq!(lex.next_token(), Token::Semicolon);
     }
 
@@ -365,49 +379,49 @@ mod test {
 
         let tokens = vec![
             Token::Let,
-            Token::Ident(String::from("add")),
+            Token::ident("add"),
             Token::Assign,
             Token::Function,
             Token::Lparen,
-            Token::Ident(String::from("x")),
+            Token::ident("x"),
             Token::Comma,
-            Token::Ident(String::from("y")),
+            Token::ident("y"),
             Token::Rparen,
             Token::LSquirly,
             Token::Return,
-            Token::Ident(String::from("x")),
+            Token::ident("x"),
             Token::Plus,
-            Token::Ident(String::from("y")),
+            Token::ident("y"),
             Token::Semicolon,
             Token::RSquirly,
             Token::Semicolon,
             Token::Let,
-            Token::Ident(String::from("result")),
+            Token::ident("result"),
             Token::Assign,
-            Token::Ident(String::from("add")),
+            Token::ident("add"),
             Token::Lparen,
-            Token::Ident(String::from("five")),
+            Token::ident("five"),
             Token::Comma,
-            Token::Ident(String::from("ten")),
+            Token::ident("ten"),
             Token::Rparen,
             Token::Semicolon,
             Token::Bang,
             Token::Minus,
             Token::ForwardSlash,
             Token::Asterisk,
-            Token::Number(String::from("5")),
+            Token::number("5"),
             Token::Semicolon,
-            Token::Number(String::from("5")),
+            Token::number("5"),
             Token::LessThan,
-            Token::Number(String::from("10")),
+            Token::number("10"),
             Token::GreaterThan,
-            Token::Number(String::from("5")),
+            Token::number("5"),
             Token::Semicolon,
             Token::If,
             Token::Lparen,
-            Token::Number(String::from("5")),
+            Token::number("5"),
             Token::LessThan,
-            Token::Number(String::from("10")),
+            Token::number("10"),
             Token::Rparen,
             Token::LSquirly,
             Token::Return,
@@ -420,24 +434,24 @@ mod test {
             Token::False,
             Token::Semicolon,
             Token::RSquirly,
-            Token::Number(String::from("10")),
+            Token::number("10"),
             Token::Equal,
-            Token::Number(String::from("10")),
+            Token::number("10"),
             Token::Semicolon,
-            Token::Number(String::from("10")),
+            Token::number("10"),
             Token::NotEqual,
-            Token::Number(String::from("9")),
+            Token::number("9"),
             Token::Semicolon,
             Token::LessThanOrEqual,
             Token::GreaterThanOrEqual,
             Token::And,
             Token::Or,
-            Token::Number(String::from(".51")),
+            Token::number(".51"),
             Token::Semicolon,
-            Token::Number(String::from("1.23")),
+            Token::number("1.23"),
             Token::Semicolon,
-            Token::Number(String::from("2.3")),
-            Token::Number(String::from(".4")),
+            Token::number("2.3"),
+            Token::number(".4"),
             Token::Semicolon,
             Token::Eof,
         ];
@@ -458,7 +472,7 @@ mod test {
         assert_eq!(Token::Let, lex.peek_token());
         assert_eq!(Token::Illegal, lex.curr_token());
         assert_eq!(Token::Let, lex.next_token());
-        assert_eq!(Token::Ident(String::from("five")), lex.peek_token());
+        assert_eq!(Token::ident("five"), lex.peek_token());
         assert_eq!(Token::Let, lex.curr_token());
     }
 

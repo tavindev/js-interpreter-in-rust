@@ -6,7 +6,7 @@ impl Ident {
         Self(ident.into())
     }
 
-    pub fn value(self) -> String {
-        self.0.to_string()
+    pub fn value(&self) -> String {
+        self.0.clone()
     }
 }

@@ -80,23 +80,15 @@ impl Environment {
 fn define_native_functions(env: &mut Environment) {
     env.define(
         "clock",
-        Value::Function(Box::new(NativeFunction {
-            name: "clock".to_string(),
-            arguments: vec![],
-            function: |_, _| {
-                return clock();
-            },
-        })),
+        Value::Function(Box::new(NativeFunction::new("clock", vec![], |_, _| {
+            return clock();
+        }))),
     );
 
     env.define(
         "random",
-        Value::Function(Box::new(NativeFunction {
-            name: "random".to_string(),
-            arguments: vec![],
-            function: |_, _| {
-                return random();
-            },
-        })),
+        Value::Function(Box::new(NativeFunction::new("random", vec![], |_, _| {
+            return random();
+        }))),
     );
 }

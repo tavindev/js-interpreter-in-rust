@@ -271,7 +271,7 @@ impl Parser {
             Token::Number(int) => Expression::Literal(Value::number(
                 int.parse::<f64>().expect("Expected a number"),
             )),
-            Token::String(string) => Expression::Literal(Value::String(string)),
+            Token::String(string) => Expression::Literal(Value::String(string.to_string())),
             Token::True => Expression::Literal(Value::Bool(true)),
             Token::False => Expression::Literal(Value::Bool(false)),
             Token::Null => Expression::Literal(Value::Null),
@@ -547,7 +547,7 @@ mod tests {
         assert_eq!(
             stmt,
             vec![Statement::_let(
-                Ident::new(s!("a")),
+                Ident::new("a"),
                 Some(Expression::literal(Value::number(1.0)))
             )]
         );
