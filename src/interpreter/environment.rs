@@ -70,6 +70,10 @@ impl Environment {
 
     pub fn has(&self, name: &str) -> bool {
         self.values.contains_key(name)
+            || match &self.enclosing {
+                Some(enclosing) => enclosing.has(name),
+                None => false,
+            }
     }
 
     pub fn contents(&self) -> &HashMap<String, Value> {

@@ -1,4 +1,7 @@
-use js_interpreter_in_rust::{interpreter::interpreter::Interpreter, parser::parser::Parser};
+use js_interpreter_in_rust::{
+    interpreter::{environment::Environment, interpreter::Interpreter},
+    parser::parser::Parser,
+};
 
 fn main() {
     let path = std::env::args().nth(1).expect("missing path argument");
@@ -6,7 +9,8 @@ fn main() {
     let mut parser = Parser::new(source);
     let statements = parser.parse();
 
+    let mut environment = Environment::new();
     let mut intepreter = Interpreter::new(statements);
 
-    intepreter.run();
+    intepreter.run(&mut environment);
 }

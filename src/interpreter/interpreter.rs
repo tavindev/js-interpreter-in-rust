@@ -8,46 +8,39 @@ use crate::parser::{
 
 pub struct Interpreter {
     statements: Vec<Statement>,
-    environment: Environment,
 }
 
 impl Interpreter {
     pub fn new(statements: Vec<Statement>) -> Interpreter {
-        Interpreter {
-            statements,
-            environment: Environment::new(),
-        }
+        Interpreter { statements }
     }
 
-    pub fn execute_block(&mut self, block: BlockStatement, environment: Environment) -> Value {
+    pub fn execute_block(&mut self, block: BlockStatement, environment: &mut Environment) -> Value {
         let mut return_value = Value::Null;
-        let previous = self.environment.clone();
-
-        self.environment = environment;
 
         for statement in block.statements() {
-            if let Some(value) = self.execute(statement) {
+            dbg!(statement);
+            if let Some(value) = self.execute(statement, environment) {
                 return_value = value;
                 break;
             }
+            dbg!(&environment);
         }
-
-        self.environment = previous;
 
         return return_value;
     }
 
-    pub fn evaluate(&mut self, expr: &Expression) -> Value {
+    pub fn evaluate(&mut self, expr: &Expression, environment: &mut Environment) -> Value {
         match expr {
             Expression::Assignement { ident, value } => {
                 let name = ident.value();
 
-                if !self.environment.has(&name) {
+                if !environment.has(&name) {
                     panic!("Undefined variable: {}", name);
                 }
 
-                let value = self.evaluate(value);
-                self.environment.assign(&name, value.clone());
+                let value = self.evaluate(value, environment);
+                environment.assign(&name, value.clone());
 
                 return value;
             }
@@ -56,8 +49,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.evaluate(&left);
-                let right = self.evaluate(&right);
+                let left = self.evaluate(&left, environment);
+                let right = self.evaluate(&right, environment);
 
                 match operator {
                     Operator::Plus => left.sum(&right),
@@ -75,10 +68,10 @@ impl Interpreter {
                     _ => unimplemented!(),
                 }
             }
-            Expression::Grouping(expression) => self.evaluate(&expression),
+            Expression::Grouping(expression) => self.evaluate(&expression, environment),
             Expression::Literal(value) => value.clone(),
             Expression::Unary { operator, right } => {
-                let right = self.evaluate(&right);
+                let right = self.evaluate(&right, environment);
 
                 match operator {
                     Operator::Minus => Value::Number(-right.to_number()),
@@ -89,15 +82,15 @@ impl Interpreter {
             Expression::Variable(ident) => {
                 let name = ident.value();
 
-                return self.environment.get(&name).clone();
+                return environment.get(&name).clone();
             }
             Expression::Call { callee, arguments } => {
-                let callee = self.evaluate(callee);
+                let callee = self.evaluate(callee, environment);
 
                 if let Value::Function(function) = callee {
                     let arguments = arguments
                         .into_iter()
-                        .map(|argument| self.evaluate(argument))
+                        .map(|argument| self.evaluate(argument, environment))
                         .collect::<Vec<Value>>();
 
                     if function.arity() != arguments.len() {
@@ -108,6 +101,8 @@ impl Interpreter {
                         );
                     }
 
+                    dbg!(function.name());
+
                     return function.call(self, arguments);
                 } else {
                     panic!("Can only call functions and classes, got {:?}", callee);
@@ -116,10 +111,10 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, statement: &Statement) -> Option<Value> {
+    fn execute(&mut self, statement: &Statement, environment: &mut Environment) -> Option<Value> {
         match statement {
             Statement::Print(stmt) => {
-                let value = self.evaluate(stmt);
+                let value = self.evaluate(stmt, environment);
                 println!("{:?}", value);
             }
             Statement::Let(stmt) => {
@@ -127,82 +122,88 @@ impl Interpreter {
                 let name = ident.value();
 
                 if let Some(expression) = &stmt.expression {
-                    let value = self.evaluate(&expression);
+                    let value = self.evaluate(&expression, environment);
 
-                    self.environment.define(name, value.clone());
+                    environment.define(name, value.clone());
                 } else {
-                    self.environment.define(name, Value::Null);
+                    environment.define(name, Value::Null);
                 };
             }
             Statement::If(stmt) => {
-                let condition = self.evaluate(&stmt.condition);
+                let condition = self.evaluate(&stmt.condition, environment);
 
                 if condition.is_truthy() {
-                    self.execute(&stmt.consequence);
+                    self.execute(&stmt.consequence, environment);
                 } else if let Some(alternative) = &stmt.alternative {
-                    self.execute(&alternative);
+                    self.execute(&alternative, environment);
                 }
             }
             Statement::While(stmt) => {
-                while self.evaluate(&stmt.condition).is_truthy() {
-                    self.execute(&stmt.body);
+                while self.evaluate(&stmt.condition, environment).is_truthy() {
+                    self.execute(&stmt.body, environment);
                 }
             }
             Statement::Block(stmt) => {
                 for statement in stmt.statements() {
-                    self.execute(statement);
+                    self.execute(statement, environment);
                 }
             }
             Statement::Expression(stmt) => {
-                Some(self.evaluate(stmt));
+                Some(self.evaluate(stmt, environment));
             }
             Statement::Function(FunctionStatement {
                 ident,
-                body,
                 parameters,
+                body,
             }) => {
-                let name = ident.clone().value();
                 let function = Value::function(JsFunction::new(
                     ident.clone(),
                     parameters.clone(),
                     body.clone(),
-                    self.environment.clone(),
+                    environment.clone(),
                 ));
 
-                self.environment.define(name, function);
+                environment.define(ident.value(), function);
             }
             Statement::Return(value) => {
-                return Some(self.evaluate(value));
+                return Some(self.evaluate(value, environment));
             }
         }
 
         None
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, environment: &mut Environment) {
         let statements = self.statements.clone();
 
         for statement in statements {
-            self.execute(&statement);
+            self.execute(&statement, environment);
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-
+    use super::*;
     use crate::parser::parser::Parser;
 
-    use super::*;
+    struct RunResult {
+        interpreter: Interpreter,
+        environment: Environment,
+    }
 
-    fn run_interpreter(code: &str) -> Interpreter {
+    fn run_interpreter(code: &str) -> RunResult {
+        let mut environment = Environment::new();
         let statements = Parser::new(code).parse();
 
         let mut interpreter = Interpreter::new(statements);
 
-        interpreter.run();
+        interpreter.run(&mut environment);
 
-        interpreter
+        RunResult {
+            interpreter,
+            environment,
+        }
     }
 
     #[test]
@@ -255,15 +256,18 @@ mod tests {
             
             function count() {
                 i = i + 1;
-                print i; 
+                return i; 
             }
         
             return count;
         }
         
-        let counter = makeCounter();",
+        let counter = makeCounter();
+        let a = counter();
+        let b = counter();",
         );
 
-        assert_eq!(interpreter.environment.get("i"), &Value::Number(1.0));
+        assert_eq!(interpreter.environment.get("a"), &Value::Number(1.0));
+        assert_eq!(interpreter.environment.get("b"), &Value::Number(2.0));
     }
 }

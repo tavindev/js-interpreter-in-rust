@@ -1,6 +1,9 @@
 use std::io::{self, Write};
 
-use js_interpreter_in_rust::{interpreter::interpreter::Interpreter, parser::parser::Parser};
+use js_interpreter_in_rust::{
+    interpreter::{environment::Environment, interpreter::Interpreter},
+    parser::parser::Parser,
+};
 
 fn main() {
     let stdin = std::io::stdin();
@@ -14,6 +17,7 @@ fn main() {
 
         let statements = Parser::new(line).parse();
 
-        Interpreter::new(statements).run();
+        let mut environment = Environment::new();
+        Interpreter::new(statements).run(&mut environment);
     }
 }

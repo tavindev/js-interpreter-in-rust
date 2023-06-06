@@ -310,7 +310,6 @@ mod test {
 
         for token in tokens {
             let next_token = lex.next_token();
-            println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
         }
     }
@@ -344,7 +343,6 @@ mod test {
 
         for token in tokens {
             let next_token = lexer.next_token();
-            println!("expected: {:?}, received {:?}", token, next_token);
             assert_eq!(token, next_token);
             assert_eq!(next_token, lexer.curr_token());
         }

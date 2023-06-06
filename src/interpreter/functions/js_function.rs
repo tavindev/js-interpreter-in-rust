@@ -39,7 +39,9 @@ impl Callable for JsFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value {
-        let mut environment: Environment = Environment::new_enclosing(self.closure.clone());
+        let mut environment: Environment = Environment::new_enclosing(self.closure.clone()); // TODO: We should pass by reference
+
+        dbg!(&environment);
 
         for (parameter, argument) in self.parameters.iter().zip(arguments.into_iter()) {
             let ident = parameter.clone();
@@ -48,8 +50,7 @@ impl Callable for JsFunction {
         }
 
         let body = self.body.clone();
-
-        let ret = interpreter.execute_block(body, environment);
+        let ret = interpreter.execute_block(body, &mut environment);
 
         return ret;
     }
