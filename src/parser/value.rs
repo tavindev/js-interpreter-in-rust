@@ -2,8 +2,6 @@ use core::fmt;
 
 use crate::interpreter::{callable::Callable, functions::js_function::JsFunction};
 
-use super::{ident::Ident, statements::block::BlockStatement};
-
 #[derive(Clone)]
 pub enum Value {
     Function(Box<dyn Callable>),
@@ -54,8 +52,8 @@ impl Value {
         Value::Null
     }
 
-    pub fn function(ident: Ident, parameters: Vec<Ident>, body: BlockStatement) -> Self {
-        Value::Function(Box::new(JsFunction::new(ident, parameters, body)))
+    pub fn function(function: JsFunction) -> Self {
+        Value::Function(Box::new(function))
     }
 
     pub fn to_number(&self) -> f64 {

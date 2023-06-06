@@ -1,4 +1,4 @@
-use super::environment::Environment;
+use super::{environment::Environment, functions::js_function::JsFunction};
 use crate::parser::{
     expression::Expression,
     operator::Operator,
@@ -115,7 +115,7 @@ impl Interpreter {
 
                     return function.call(self, arguments);
                 } else {
-                    panic!("Can only call functions and classes");
+                    panic!("Can only call functions and classes, got {:?}", callee);
                 }
             }
         }
@@ -131,14 +131,12 @@ impl Interpreter {
                 let ident = stmt.ident.clone();
                 let name = ident.value();
 
-                return if let Some(expression) = stmt.expression {
+                if let Some(expression) = stmt.expression {
                     let value = self.evaluate(expression);
 
                     self.environment.define(name, value.clone());
-                    Some(value)
                 } else {
                     self.environment.define(name, Value::Null);
-                    None
                 };
             }
             Statement::If(stmt) => {
@@ -161,7 +159,7 @@ impl Interpreter {
                 }
             }
             Statement::Expression(stmt) => {
-                return Some(self.evaluate(stmt));
+                Some(self.evaluate(stmt));
             }
             Statement::Function(FunctionStatement {
                 ident,
@@ -169,7 +167,12 @@ impl Interpreter {
                 parameters,
             }) => {
                 let name = ident.clone().value();
-                let function = Value::function(ident, parameters, body);
+                let function = Value::function(JsFunction::new(
+                    ident,
+                    parameters,
+                    body,
+                    self.environment.clone(),
+                ));
 
                 self.environment.define(name, function);
             }
@@ -244,5 +247,26 @@ mod tests {
         );
 
         assert_eq!(interpreter.environment.get("a"), &Value::Number(1.0));
+    }
+
+    #[test]
+    fn closures() {
+        let interpreter = run_interpreter(
+            "
+        function makeCounter() {
+            let i = 0;
+            
+            function count() {
+                i = i + 1;
+                print i; 
+            }
+        
+            return count;
+        }
+        
+        let counter = makeCounter();",
+        );
+
+        assert_eq!(interpreter.environment.get("i"), &Value::Number(1.0));
     }
 }

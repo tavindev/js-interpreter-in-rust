@@ -5,17 +5,24 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct JsFunction {
-    pub ident: Ident,
-    pub parameters: Vec<Ident>,
-    pub body: BlockStatement,
+    ident: Ident,
+    parameters: Vec<Ident>,
+    body: BlockStatement,
+    closure: Environment,
 }
 
 impl JsFunction {
-    pub fn new(ident: Ident, parameters: Vec<Ident>, body: BlockStatement) -> Self {
+    pub fn new(
+        ident: Ident,
+        parameters: Vec<Ident>,
+        body: BlockStatement,
+        closure: Environment,
+    ) -> Self {
         Self {
             ident,
             parameters,
             body,
+            closure,
         }
     }
 }
@@ -32,8 +39,7 @@ impl Callable for JsFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value {
-        let globals = interpreter.get_globals();
-        let mut environment = Environment::new_enclosing(globals.clone());
+        let mut environment: Environment = Environment::new_enclosing(self.closure.clone());
 
         for (parameter, argument) in self.parameters.iter().zip(arguments.into_iter()) {
             let ident = parameter.clone();
@@ -43,7 +49,9 @@ impl Callable for JsFunction {
 
         let body = self.body.clone();
 
-        return interpreter.execute_block(body, environment);
+        let ret = interpreter.execute_block(body, environment);
+
+        return ret;
     }
 }
 

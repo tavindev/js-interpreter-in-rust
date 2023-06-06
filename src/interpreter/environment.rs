@@ -33,7 +33,9 @@ impl Environment {
     }
 
     pub fn define<S: Into<String>>(&mut self, name: S, value: Value) {
-        self.values.insert(name.into(), value);
+        let name = name.into();
+
+        self.values.insert(name, value);
     }
 
     pub fn get(&self, name: &str) -> &Value {
@@ -68,6 +70,10 @@ impl Environment {
 
     pub fn has(&self, name: &str) -> bool {
         self.values.contains_key(name)
+    }
+
+    pub fn contents(&self) -> &HashMap<String, Value> {
+        &self.values
     }
 }
 

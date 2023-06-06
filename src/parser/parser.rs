@@ -267,7 +267,7 @@ impl Parser {
      */
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
-            Token::Ident(ident) => Expression::Variable(Ident::new(ident)),
+            Token::Ident(ident) => Expression::variable(ident),
             Token::Number(int) => Expression::Literal(Value::number(
                 int.parse::<f64>().expect("Expected a number"),
             )),
@@ -824,8 +824,52 @@ mod tests {
         let expected = vec![
             Statement::_return(Expression::literal(Value::number(1.0))),
             Statement::_return(Expression::literal(Value::Null)),
-            Statement::_return(Expression::variable(Ident::new("a"))),
+            Statement::_return(Expression::variable("a")),
         ];
+
+        assert_eq!(stmt, expected);
+    }
+
+    #[test]
+    fn function_with_closures() {
+        let mut parser = Parser::new(s!("function makeCounter() {
+            let i = 0;
+            
+            function count() {
+                i = i + 1;
+                print i; 
+            }
+        
+            return count;
+        }"));
+        let stmt = parser.parse();
+
+        let expected = vec![Statement::function(
+            Ident::new("makeCounter"),
+            vec![],
+            BlockStatement::new(vec![
+                Statement::_let(
+                    Ident::new("i"),
+                    Some(Expression::literal(Value::number(0.0))),
+                ),
+                Statement::function(
+                    Ident::new("count"),
+                    vec![],
+                    BlockStatement::new(vec![
+                        Statement::_expression(Expression::assignement(
+                            Ident::new("i"),
+                            Expression::binary(
+                                Expression::variable("i"),
+                                Operator::Plus,
+                                Expression::literal(Value::number(1.0)),
+                            ),
+                        )),
+                        Statement::print(Expression::variable("i")),
+                    ]),
+                ),
+                Statement::_return(Expression::variable("count")),
+            ]),
+        )];
 
         assert_eq!(stmt, expected);
     }

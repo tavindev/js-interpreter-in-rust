@@ -62,8 +62,8 @@ impl Expression {
         }
     }
 
-    pub fn variable(ident: Ident) -> Expression {
-        Expression::Variable(ident)
+    pub fn variable<S: Into<String>>(ident: S) -> Expression {
+        Expression::Variable(Ident::new(ident.into()))
     }
 }
 

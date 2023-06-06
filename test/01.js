@@ -1,7 +1,14 @@
-function add(a, b) {
-	return a + b;
+function makeCounter() {
+	let i = 0;
+	
+	function count() {
+		i = i + 1;
+		print i; 
+	}
+
+	return count;
 }
 
-let result = add(10, 20);
-
-print result;
+let counter = makeCounter();
+counter(); 
+counter();
