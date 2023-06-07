@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
 use crate::parser::value::Value;
 
@@ -7,10 +7,19 @@ use super::functions::{
     native_function::NativeFunction,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Value>,
+}
+
+impl Clone for Environment {
+    fn clone(&self) -> Self {
+        Environment {
+            enclosing: None,
+            values: self.values.clone(),
+        }
+    }
 }
 
 impl Environment {
@@ -25,9 +34,9 @@ impl Environment {
         env
     }
 
-    pub fn new_enclosing(enclosing: Environment) -> Environment {
+    pub fn new_enclosing(enclosing: &Rc<RefCell<Environment>>) -> Environment {
         Environment {
-            enclosing: Some(Box::new(enclosing)),
+            enclosing: Some(Rc::clone(enclosing)),
             values: HashMap::new(),
         }
     }
@@ -38,14 +47,17 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, name: &str) -> &Value {
+    pub fn get(&self, name: &str) -> Value {
         if let Some(value) = self.values.get(name) {
-            return value;
+            return value.clone();
         }
 
         if let Some(enclosing) = &self.enclosing {
+            let enclosing = enclosing.deref().borrow_mut();
+
             if enclosing.has(name) {
-                return enclosing.get(name);
+                let value = enclosing.get(name);
+                return value;
             }
         }
 
@@ -58,7 +70,15 @@ impl Environment {
             return;
         }
 
-        if let Some(enclosing) = &mut self.enclosing {
+        // if enclosing.has(name) {
+        //     enclosing.assign(name, value);
+        //     return;
+        // }
+
+        // Assign to enclosing
+        if let Some(enclosing) = &self.enclosing {
+            let mut enclosing = enclosing.deref().borrow_mut();
+
             if enclosing.has(name) {
                 enclosing.assign(name, value);
                 return;
@@ -67,13 +87,20 @@ impl Environment {
 
         panic!("Undefined variable: {}", name);
     }
-
     pub fn has(&self, name: &str) -> bool {
-        self.values.contains_key(name)
-            || match &self.enclosing {
-                Some(enclosing) => enclosing.has(name),
-                None => false,
+        if let Some(_) = self.values.get(name) {
+            return true;
+        }
+
+        if let Some(enclosing) = &self.enclosing {
+            let enclosing = enclosing.borrow();
+
+            if enclosing.has(name) {
+                return true;
             }
+        }
+
+        return false;
     }
 
     pub fn contents(&self) -> &HashMap<String, Value> {

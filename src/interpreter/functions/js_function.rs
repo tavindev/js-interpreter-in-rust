@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     interpreter::{callable::Callable, environment::Environment, interpreter::Interpreter},
     parser::{ident::Ident, statements::block::BlockStatement, value::Value},
@@ -8,7 +10,7 @@ pub struct JsFunction {
     ident: Ident,
     parameters: Vec<Ident>,
     body: BlockStatement,
-    closure: Environment,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl JsFunction {
@@ -16,7 +18,7 @@ impl JsFunction {
         ident: Ident,
         parameters: Vec<Ident>,
         body: BlockStatement,
-        closure: Environment,
+        closure: Rc<RefCell<Environment>>,
     ) -> Self {
         Self {
             ident,
@@ -39,14 +41,12 @@ impl Callable for JsFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value {
-        let mut environment: Environment = Environment::new_enclosing(self.closure.clone()); // TODO: We should pass by reference
-
-        dbg!(&environment);
+        let mut environment = Rc::new(RefCell::new(Environment::new_enclosing(&self.closure))); // TODO: We should pass by reference
 
         for (parameter, argument) in self.parameters.iter().zip(arguments.into_iter()) {
             let ident = parameter.clone();
 
-            environment.define(ident.value(), argument);
+            environment.borrow_mut().define(ident.value(), argument);
         }
 
         let body = self.body.clone();

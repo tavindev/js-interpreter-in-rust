@@ -1,4 +1,8 @@
-use std::io::{self, Write};
+use std::{
+    cell::RefCell,
+    io::{self, Write},
+    rc::Rc,
+};
 
 use js_interpreter_in_rust::{
     interpreter::{environment::Environment, interpreter::Interpreter},
@@ -17,7 +21,7 @@ fn main() {
 
         let statements = Parser::new(line).parse();
 
-        let mut environment = Environment::new();
+        let mut environment = Rc::new(RefCell::new(Environment::new()));
         Interpreter::new(statements).run(&mut environment);
     }
 }

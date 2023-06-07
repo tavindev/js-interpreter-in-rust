@@ -1,4 +1,14 @@
-use super::{environment::Environment, functions::js_function::JsFunction};
+use std::{
+    cell::{RefCell, RefMut},
+    env,
+    ops::Deref,
+    rc::Rc,
+};
+
+use super::{
+    environment::{self, Environment},
+    functions::js_function::JsFunction,
+};
 use crate::parser::{
     expression::Expression,
     operator::Operator,
@@ -15,12 +25,17 @@ impl Interpreter {
         Interpreter { statements }
     }
 
-    pub fn execute_block(&mut self, block: BlockStatement, environment: &mut Environment) -> Value {
+    pub fn execute_block(
+        &mut self,
+        block: BlockStatement,
+        environment: &mut Rc<RefCell<Environment>>,
+    ) -> Value {
         let mut return_value = Value::Null;
+        let mut environment = environment.borrow_mut();
 
         for statement in block.statements() {
             dbg!(statement);
-            if let Some(value) = self.execute(statement, environment) {
+            if let Some(value) = self.execute(statement, &mut environment) {
                 return_value = value;
                 break;
             }
@@ -30,7 +45,7 @@ impl Interpreter {
         return return_value;
     }
 
-    pub fn evaluate(&mut self, expr: &Expression, environment: &mut Environment) -> Value {
+    pub fn evaluate(&mut self, expr: &Expression, environment: &mut RefMut<Environment>) -> Value {
         match expr {
             Expression::Assignement { ident, value } => {
                 let name = ident.value();
@@ -111,7 +126,11 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, statement: &Statement, environment: &mut Environment) -> Option<Value> {
+    fn execute(
+        &mut self,
+        statement: &Statement,
+        environment: &mut RefMut<Environment>,
+    ) -> Option<Value> {
         match statement {
             Statement::Print(stmt) => {
                 let value = self.evaluate(stmt, environment);
@@ -156,14 +175,15 @@ impl Interpreter {
                 parameters,
                 body,
             }) => {
-                let function = Value::function(JsFunction::new(
-                    ident.clone(),
-                    parameters.clone(),
-                    body.clone(),
-                    environment.clone(),
-                ));
+                // let function = Value::function(JsFunction::new(
+                //     ident.clone(),
+                //     parameters.clone(),
+                //     body.clone(),
+                //     environment,
+                // ));
 
-                environment.define(ident.value(), function);
+                // environment.define(ident.value(), function);
+                todo!()
             }
             Statement::Return(value) => {
                 return Some(self.evaluate(value, environment));
@@ -173,11 +193,12 @@ impl Interpreter {
         None
     }
 
-    pub fn run(&mut self, environment: &mut Environment) {
+    pub fn run(&mut self, environment: &mut Rc<RefCell<Environment>>) {
         let statements = self.statements.clone();
+        let mut environment = environment.borrow_mut();
 
         for statement in statements {
-            self.execute(&statement, environment);
+            self.execute(&statement, &mut environment);
         }
     }
 }
@@ -187,13 +208,23 @@ mod tests {
     use super::*;
     use crate::parser::parser::Parser;
 
+    struct EnvironmentHelper {
+        environment: Rc<RefCell<Environment>>,
+    }
+
+    impl EnvironmentHelper {
+        fn get(&self, name: &str) -> Value {
+            self.environment.borrow().get(name).clone()
+        }
+    }
+
     struct RunResult {
         interpreter: Interpreter,
-        environment: Environment,
+        environment: EnvironmentHelper,
     }
 
     fn run_interpreter(code: &str) -> RunResult {
-        let mut environment = Environment::new();
+        let mut environment = Rc::new(RefCell::new(Environment::new()));
         let statements = Parser::new(code).parse();
 
         let mut interpreter = Interpreter::new(statements);
@@ -202,7 +233,7 @@ mod tests {
 
         RunResult {
             interpreter,
-            environment,
+            environment: EnvironmentHelper { environment },
         }
     }
 
@@ -210,15 +241,15 @@ mod tests {
     fn variable_declaration() {
         let interpreter = run_interpreter("let x = 1; let y;");
 
-        assert_eq!(interpreter.environment.get("x"), &Value::Number(1.0));
-        assert_eq!(interpreter.environment.get("y"), &Value::Null);
+        assert_eq!(interpreter.environment.get("x"), Value::Number(1.0));
+        assert_eq!(interpreter.environment.get("y"), Value::Null);
     }
 
     #[test]
     fn variable_assignment() {
         let interpreter = run_interpreter("let x = 1; x = 2;");
 
-        assert_eq!(interpreter.environment.get("x"), &Value::Number(2.0));
+        assert_eq!(interpreter.environment.get("x"), Value::Number(2.0));
     }
 
     #[test]
@@ -231,7 +262,7 @@ mod tests {
     fn if_statement() {
         let interpreter = run_interpreter("let x = 1; if (true) { x = 2; }");
 
-        assert_eq!(interpreter.environment.get("x"), &Value::Number(2.0));
+        assert_eq!(interpreter.environment.get("x"), Value::Number(2.0));
     }
 
     #[test]
@@ -244,7 +275,7 @@ mod tests {
             let a = foo();",
         );
 
-        assert_eq!(interpreter.environment.get("a"), &Value::Number(1.0));
+        assert_eq!(interpreter.environment.get("a"), Value::Number(1.0));
     }
 
     #[test]
@@ -267,7 +298,7 @@ mod tests {
         let b = counter();",
         );
 
-        assert_eq!(interpreter.environment.get("a"), &Value::Number(1.0));
-        assert_eq!(interpreter.environment.get("b"), &Value::Number(2.0));
+        assert_eq!(interpreter.environment.get("a"), Value::Number(1.0));
+        assert_eq!(interpreter.environment.get("b"), Value::Number(2.0));
     }
 }
