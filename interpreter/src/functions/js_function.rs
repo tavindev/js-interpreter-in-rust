@@ -32,6 +32,10 @@ impl Callable for JsFunction {
         self.name.clone()
     }
 
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     fn arity(&self) -> usize {
         return self.parameters.len();
     }

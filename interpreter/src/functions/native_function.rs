@@ -28,6 +28,10 @@ impl Callable for NativeFunction {
         self.name.clone()
     }
 
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Value>) -> Value {
         (self.function)(_interpreter, _arguments)
     }

@@ -50,7 +50,12 @@ impl Interpreter {
                     panic!("Undefined variable: {}", name);
                 }
 
-                let value = self.evaluate(value, environment);
+                let mut value = self.evaluate(value, environment);
+
+                if let Value::Function(function) = &mut value {
+                    function.set_name(name.clone())
+                }
+
                 environment.assign(&name, value.clone());
 
                 return value;
@@ -280,7 +285,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Not implemented yet"]
     fn closures() {
         let interpreter = run_interpreter(
             "
