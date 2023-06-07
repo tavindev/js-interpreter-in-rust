@@ -10,3 +10,9 @@ impl Ident {
         self.0.clone()
     }
 }
+
+impl Into<String> for Ident {
+    fn into(self) -> String {
+        self.0
+    }
+}

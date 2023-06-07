@@ -1,6 +1,6 @@
 use dyn_clone::DynClone;
 
-use crate::{interpreter::interpreter::Interpreter, parser::value::Value};
+use crate::{interpreter::Interpreter, value::Value};
 
 pub trait Callable: DynClone {
     fn name(&self) -> String;

@@ -1,0 +1,5 @@
+[package]
+name = "lexer"
+version = "0.1.0"
+authors = ["Gustavo Chevrand <gvwchevrand@gmail.com>"]
+edition = "2021"

@@ -1,4 +1,5 @@
-pub mod callable;
+mod callable;
 pub mod environment;
-pub mod functions;
+mod functions;
 pub mod interpreter;
+mod value;

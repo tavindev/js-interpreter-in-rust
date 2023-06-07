@@ -1,4 +1,4 @@
-use crate::parser::{expression::Expression, ident::Ident};
+use crate::{expression::Expression, ident::Ident};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStatement {

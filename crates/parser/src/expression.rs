@@ -1,4 +1,4 @@
-use super::{ident::Ident, operator::Operator, value::Value};
+use crate::{ident::Ident, operator::Operator, value::Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {

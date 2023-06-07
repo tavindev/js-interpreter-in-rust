@@ -1,9 +1,9 @@
-use crate::{
-    lexer::lexer::{Lexer, Token},
-    parser::operator::Operator,
-};
+use lexer::lexer::{Lexer, Token};
 
-use super::{expression::Expression, ident::Ident, statements::statement::Statement, value::Value};
+use crate::{
+    expression::Expression, ident::Ident, operator::Operator, statements::statement::Statement,
+    value::Value,
+};
 
 enum FunctionType {
     Function,
@@ -268,9 +268,7 @@ impl Parser {
     fn primary(&mut self) -> Expression {
         match self.lexer.next_token() {
             Token::Ident(ident) => Expression::variable(ident),
-            Token::Number(int) => Expression::Literal(Value::number(
-                int.parse::<f64>().expect("Expected a number"),
-            )),
+            Token::Number(int) => Expression::Literal(Value::number(int)),
             Token::String(string) => Expression::Literal(Value::String(string.to_string())),
             Token::True => Expression::Literal(Value::Bool(true)),
             Token::False => Expression::Literal(Value::Bool(false)),
@@ -533,11 +531,9 @@ impl Parser {
 mod tests {
     use std::vec;
 
+    use crate::{s, statements::block::BlockStatement};
+
     use super::*;
-    use crate::{
-        parser::{expression::Expression, statements::block::BlockStatement},
-        s,
-    };
 
     #[test]
     fn let_statement() {
@@ -548,7 +544,7 @@ mod tests {
             stmt,
             vec![Statement::_let(
                 Ident::new("a"),
-                Some(Expression::literal(Value::number(1.0)))
+                Some(Expression::literal(Value::number("1")))
             )]
         );
     }
@@ -558,7 +554,7 @@ mod tests {
         let mut parser = Parser::new(s!("1;"));
         let expr = parser.expression();
 
-        assert_eq!(expr, Expression::literal(Value::number(1.0)));
+        assert_eq!(expr, Expression::literal(Value::number("1")));
     }
 
     #[test]
@@ -569,9 +565,9 @@ mod tests {
         assert_eq!(
             expr,
             Expression::binary(
-                Expression::literal(Value::number(1.0)),
+                Expression::literal(Value::number("1")),
                 Operator::Plus,
-                Expression::literal(Value::number(2.0)),
+                Expression::literal(Value::number("2")),
             )
         );
     }
@@ -584,9 +580,9 @@ mod tests {
         assert_eq!(
             expr,
             Expression::grouping(Expression::binary(
-                Expression::literal(Value::number(1.0)),
+                Expression::literal(Value::number("1")),
                 Operator::Plus,
-                Expression::literal(Value::number(2.0)),
+                Expression::literal(Value::number("2")),
             ))
         );
     }
@@ -631,7 +627,7 @@ mod tests {
                 Expression::grouping(Expression::binary(
                     Expression::unary(Operator::Bang, Expression::literal(Value::Bool(true))),
                     Operator::Plus,
-                    Expression::literal(Value::number(1.0)),
+                    Expression::literal(Value::number("1")),
                 ))
             )
         );
@@ -645,12 +641,12 @@ mod tests {
         assert_eq!(
             expr,
             Expression::binary(
-                Expression::literal(Value::number(1.0)),
+                Expression::literal(Value::number("1")),
                 Operator::Plus,
                 Expression::binary(
-                    Expression::literal(Value::number(2.0)),
+                    Expression::literal(Value::number("2")),
                     Operator::Asterisk,
-                    Expression::literal(Value::number(3.0)),
+                    Expression::literal(Value::number("3")),
                 ),
             )
         );
@@ -665,12 +661,12 @@ mod tests {
             expr,
             Expression::binary(
                 Expression::grouping(Expression::binary(
-                    Expression::literal(Value::number(1.0)),
+                    Expression::literal(Value::number("1")),
                     Operator::Plus,
-                    Expression::literal(Value::number(2.0)),
+                    Expression::literal(Value::number("2")),
                 )),
                 Operator::Asterisk,
-                Expression::literal(Value::number(3.0)),
+                Expression::literal(Value::number("3")),
             )
         );
     }
@@ -698,7 +694,7 @@ mod tests {
                 stmt,
                 Statement::_let(
                     Ident::new("a"),
-                    Some(Expression::Literal(Value::number(1.0))),
+                    Some(Expression::Literal(Value::number("1"))),
                 )
             );
         }
@@ -712,7 +708,7 @@ mod tests {
     //     assert_eq!(
     //         stmt,
     //         Statement::Return(ReturnStatement {
-    //             expression: Some(Expression::Literal(Value::number(1.0))),
+    //             expression: Some(Expression::Literal(Value::number("1"))),
     //         })
     //     );
     // }
@@ -725,7 +721,7 @@ mod tests {
         for stmt in stmt {
             assert_eq!(
                 stmt,
-                Statement::Expression(Expression::Literal(Value::number(1.0)))
+                Statement::Expression(Expression::Literal(Value::number("1")))
             );
         }
     }
@@ -739,7 +735,7 @@ mod tests {
             assert_eq!(
                 stmt,
                 Statement::_block(vec![Statement::_expression(Expression::literal(
-                    Value::number(1.0)
+                    Value::number("1")
                 ))])
             );
         }
@@ -766,7 +762,7 @@ mod tests {
                 Statement::_if(
                     Expression::Literal(Value::Bool(true)),
                     Statement::_block(vec![Statement::Expression(Expression::Literal(
-                        Value::number(1.0)
+                        Value::number("1")
                     ))],),
                     None,
                 )
@@ -787,7 +783,7 @@ mod tests {
                     vec![],
                     BlockStatement::new(vec![Statement::_let(
                         Ident::new("b"),
-                        Some(Expression::Literal(Value::number(1.0)))
+                        Some(Expression::Literal(Value::number("1")))
                     ),],),
                 )
             );
@@ -822,7 +818,7 @@ mod tests {
         let stmt = parser.parse();
 
         let expected = vec![
-            Statement::_return(Expression::literal(Value::number(1.0))),
+            Statement::_return(Expression::literal(Value::number("1"))),
             Statement::_return(Expression::literal(Value::Null)),
             Statement::_return(Expression::variable("a")),
         ];
@@ -850,7 +846,7 @@ mod tests {
             BlockStatement::new(vec![
                 Statement::_let(
                     Ident::new("i"),
-                    Some(Expression::literal(Value::number(0.0))),
+                    Some(Expression::literal(Value::number("0"))),
                 ),
                 Statement::function(
                     Ident::new("count"),
@@ -861,7 +857,7 @@ mod tests {
                             Expression::binary(
                                 Expression::variable("i"),
                                 Operator::Plus,
-                                Expression::literal(Value::number(1.0)),
+                                Expression::literal(Value::number("1")),
                             ),
                         )),
                         Statement::print(Expression::variable("i")),

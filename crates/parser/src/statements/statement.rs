@@ -1,4 +1,4 @@
-use crate::parser::{expression::Expression, ident::Ident};
+use crate::{expression::Expression, ident::Ident};
 
 use super::{
     block::BlockStatement, function::FunctionStatement, r#if::IfStatement, r#let::LetStatement,
@@ -72,12 +72,13 @@ impl Statement {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::value::Value;
+
+    use crate::value::Value;
 
     use super::*;
 
     fn expression() -> Expression {
-        return Expression::assignement(Ident::new("x"), Expression::literal(Value::number(1)));
+        return Expression::assignement(Ident::new("x"), Expression::literal(Value::number("1")));
     }
 
     #[test]

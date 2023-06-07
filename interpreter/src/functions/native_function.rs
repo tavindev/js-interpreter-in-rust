@@ -1,7 +1,6 @@
-use crate::{
-    interpreter::{callable::Callable, interpreter::Interpreter},
-    parser::{ident::Ident, value::Value},
-};
+use parser::ident::Ident;
+
+use crate::{callable::Callable, interpreter::Interpreter, value::Value};
 
 #[derive(Clone)]
 pub struct NativeFunction {

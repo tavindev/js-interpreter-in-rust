@@ -1,0 +1,11 @@
+[package]
+name = "interpreter"
+version = "0.1.0"
+authors = ["Gustavo Chevrand <gvwchevrand@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+lexer = { package="lexer", path="../crates/lexer" }
+parser = { package="parser", path="../crates/parser" }
+dyn-clone = "1.0.11"
+rand = "0.8.5"

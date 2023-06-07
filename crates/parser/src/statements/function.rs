@@ -1,4 +1,4 @@
-use crate::parser::ident::Ident;
+use crate::ident::Ident;
 
 use super::block::BlockStatement;
 

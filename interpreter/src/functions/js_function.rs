@@ -1,39 +1,35 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    interpreter::{callable::Callable, environment::Environment, interpreter::Interpreter},
-    parser::{ident::Ident, statements::block::BlockStatement, value::Value},
-};
+use parser::{ident::Ident, statements::block::BlockStatement};
+
+use crate::{callable::Callable, environment::Environment, interpreter::Interpreter, value::Value};
 
 #[derive(Debug, Clone)]
 pub struct JsFunction {
-    ident: Ident,
+    name: String,
     parameters: Vec<Ident>,
     body: BlockStatement,
-    closure: Rc<RefCell<Environment>>,
+    // closure: Rc<RefCell<Environment>>,
 }
 
+#[allow(dead_code)]
 impl JsFunction {
-    pub fn new(
-        ident: Ident,
+    pub fn new<S: Into<String>>(
+        name: S,
         parameters: Vec<Ident>,
         body: BlockStatement,
-        closure: Rc<RefCell<Environment>>,
-    ) -> Self {
-        Self {
-            ident,
+    ) -> Box<Self> {
+        Box::new(Self {
+            name: name.into(),
             parameters,
             body,
-            closure,
-        }
+        })
     }
 }
 
 impl Callable for JsFunction {
     fn name(&self) -> String {
-        let ident = self.ident.clone();
-
-        return ident.value();
+        self.name.clone()
     }
 
     fn arity(&self) -> usize {
@@ -41,7 +37,7 @@ impl Callable for JsFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value {
-        let mut environment = Rc::new(RefCell::new(Environment::new_enclosing(&self.closure))); // TODO: We should pass by reference
+        let mut environment = Rc::new(RefCell::new(Environment::new())); // TODO: We should pass by reference
 
         for (parameter, argument) in self.parameters.iter().zip(arguments.into_iter()) {
             let ident = parameter.clone();
@@ -58,6 +54,6 @@ impl Callable for JsFunction {
 
 impl PartialEq for JsFunction {
     fn eq(&self, other: &Self) -> bool {
-        return self.ident == other.ident;
+        return self.name == other.name;
     }
 }

@@ -1,4 +1,4 @@
-use crate::parser::value::Value;
+use crate::value::Value;
 
 use rand::{thread_rng, Rng};
 

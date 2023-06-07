@@ -1,4 +1,4 @@
-use crate::parser::expression::Expression;
+use crate::expression::Expression;
 
 use super::statement::Statement;
 

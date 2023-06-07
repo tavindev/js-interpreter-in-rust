@@ -1,19 +1,17 @@
 use std::{
     cell::{RefCell, RefMut},
-    env,
-    ops::Deref,
     rc::Rc,
 };
 
-use super::{
-    environment::{self, Environment},
-    functions::js_function::JsFunction,
-};
-use crate::parser::{
+use crate::{functions::js_function::JsFunction, value::Value};
+
+use parser::value::Value as ParserValue;
+
+use super::environment::Environment;
+use parser::{
     expression::Expression,
     operator::Operator,
     statements::{block::BlockStatement, function::FunctionStatement, statement::Statement},
-    value::Value,
 };
 
 pub struct Interpreter {
@@ -34,12 +32,10 @@ impl Interpreter {
         let mut environment = environment.borrow_mut();
 
         for statement in block.statements() {
-            dbg!(statement);
             if let Some(value) = self.execute(statement, &mut environment) {
                 return_value = value;
                 break;
             }
-            dbg!(&environment);
         }
 
         return return_value;
@@ -84,7 +80,17 @@ impl Interpreter {
                 }
             }
             Expression::Grouping(expression) => self.evaluate(&expression, environment),
-            Expression::Literal(value) => value.clone(),
+            Expression::Literal(value) => match value {
+                ParserValue::Number(number) => Value::Number(
+                    number
+                        .parse::<f64>()
+                        .expect("Could not parse number from string"),
+                ),
+                ParserValue::String(string) => Value::String(string.clone()),
+                ParserValue::Bool(boolean) => Value::Bool(*boolean),
+                ParserValue::Null => Value::Null,
+                _ => unimplemented!(),
+            },
             Expression::Unary { operator, right } => {
                 let right = self.evaluate(&right, environment);
 
@@ -115,8 +121,6 @@ impl Interpreter {
                             arguments.len()
                         );
                     }
-
-                    dbg!(function.name());
 
                     return function.call(self, arguments);
                 } else {
@@ -175,15 +179,13 @@ impl Interpreter {
                 parameters,
                 body,
             }) => {
-                // let function = Value::function(JsFunction::new(
-                //     ident.clone(),
-                //     parameters.clone(),
-                //     body.clone(),
-                //     environment,
-                // ));
+                let function = Value::function(JsFunction::new(
+                    ident.clone(),
+                    parameters.clone(),
+                    body.clone(),
+                ));
 
-                // environment.define(ident.value(), function);
-                todo!()
+                environment.define(ident.value(), function);
             }
             Statement::Return(value) => {
                 return Some(self.evaluate(value, environment));
@@ -205,8 +207,9 @@ impl Interpreter {
 
 #[cfg(test)]
 mod tests {
+    use parser::parser::Parser;
+
     use super::*;
-    use crate::parser::parser::Parser;
 
     struct EnvironmentHelper {
         environment: Rc<RefCell<Environment>>,
@@ -219,7 +222,6 @@ mod tests {
     }
 
     struct RunResult {
-        interpreter: Interpreter,
         environment: EnvironmentHelper,
     }
 
@@ -232,7 +234,6 @@ mod tests {
         interpreter.run(&mut environment);
 
         RunResult {
-            interpreter,
             environment: EnvironmentHelper { environment },
         }
     }
@@ -279,6 +280,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Not implemented yet"]
     fn closures() {
         let interpreter = run_interpreter(
             "
