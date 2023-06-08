@@ -78,15 +78,24 @@ impl Interpreter {
             }
             Expression::Grouping(expression) => self.evaluate(&expression, environment),
             Expression::Literal(value) => match value {
+                ParserValue::String(string) => Value::String(string.clone()),
                 ParserValue::Number(number) => Value::Number(
                     number
                         .parse::<f64>()
                         .expect("Could not parse number from string"),
                 ),
-                ParserValue::String(string) => Value::String(string.clone()),
                 ParserValue::Bool(boolean) => Value::Bool(*boolean),
                 ParserValue::Null => Value::Null,
-                _ => unimplemented!(),
+                ParserValue::Function {
+                    ident,
+                    params,
+                    body,
+                } => Value::Function(JsFunction::new(
+                    ident.clone(),
+                    params.clone(),
+                    body.clone(),
+                    Rc::clone(&environment),
+                )),
             },
             Expression::Unary { operator, right } => {
                 let right = self.evaluate(&right, environment);
@@ -173,7 +182,7 @@ impl Interpreter {
                 body,
             }) => {
                 let function = Value::function(JsFunction::new(
-                    ident.clone(),
+                    Some(ident.clone()),
                     parameters.clone(),
                     body.clone(),
                     Rc::clone(&environment),
@@ -294,5 +303,19 @@ mod tests {
 
         assert_eq!(interpreter.environment.get("a"), Value::Number(1.0));
         assert_eq!(interpreter.environment.get("b"), Value::Number(2.0));
+    }
+
+    #[test]
+    fn let_functions() {
+        let interpreter = run_interpreter(
+            "
+        let foo = function() {
+            return 1;
+        };
+        
+        let a = foo();",
+        );
+
+        assert_eq!(interpreter.environment.get("a"), Value::Number(1.0));
     }
 }

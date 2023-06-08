@@ -6,7 +6,7 @@ use crate::{callable::Callable, environment::Environment, interpreter::Interpret
 
 #[derive(Debug, Clone)]
 pub struct JsFunction {
-    name: String,
+    name: Option<String>,
     parameters: Vec<Ident>,
     body: BlockStatement,
     closure: Rc<Environment>,
@@ -15,13 +15,13 @@ pub struct JsFunction {
 #[allow(dead_code)]
 impl JsFunction {
     pub fn new<S: Into<String>>(
-        name: S,
+        name: Option<S>,
         parameters: Vec<Ident>,
         body: BlockStatement,
         closure: Rc<Environment>,
     ) -> Box<Self> {
         Box::new(Self {
-            name: name.into(),
+            name: name.map(|s| s.into()),
             parameters,
             body,
             closure,
@@ -31,11 +31,13 @@ impl JsFunction {
 
 impl Callable for JsFunction {
     fn name(&self) -> String {
-        self.name.clone()
+        self.name
+            .clone()
+            .unwrap_or_else(|| "<anonymous function>".to_string())
     }
 
-    fn set_name(&mut self, name: String) {
-        self.name = name;
+    fn set_name(&mut self, _: String) {
+        unimplemented!()
     }
 
     fn arity(&self) -> usize {
@@ -59,7 +61,7 @@ impl Callable for JsFunction {
 }
 
 impl PartialEq for JsFunction {
-    fn eq(&self, other: &Self) -> bool {
-        return self.name == other.name;
+    fn eq(&self, _: &Self) -> bool {
+        false
     }
 }

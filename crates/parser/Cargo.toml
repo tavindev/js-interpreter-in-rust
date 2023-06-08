@@ -5,4 +5,4 @@ authors = ["Gustavo Chevrand <gvwchevrand@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-lexer = { package="lexer", path="../lexer" }
+lexer = { package = "lexer", path = "../lexer" }

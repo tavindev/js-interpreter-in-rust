@@ -12,3 +12,4 @@ function makeCounter() {
 let counter = makeCounter();
 counter(); 
 counter();
+print counter;

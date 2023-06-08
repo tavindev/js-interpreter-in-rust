@@ -1,15 +1,16 @@
 use core::fmt;
 
-use crate::{ident::Ident, statements::statement::Statement};
+use crate::{ident::Ident, statements::block::BlockStatement};
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
     Function {
-        arguments: Vec<Ident>,
-        body: Vec<Statement>,
+        ident: Option<Ident>,
+        params: Vec<Ident>,
+        body: BlockStatement,
     },
-    Number(String),
     String(String),
+    Number(String),
     Bool(bool),
     Null,
 }
@@ -22,9 +23,16 @@ impl fmt::Debug for Value {
             Value::Bool(bool) => write!(f, "{}", bool),
             Value::Null => write!(f, "null"),
             Value::Function {
-                arguments: _,
+                ident,
+                params: _,
                 body: _,
-            } => write!(f, "<anonymous function>"),
+            } => {
+                if let Some(ident) = ident {
+                    write!(f, "<function {}>", ident.value())
+                } else {
+                    write!(f, "<anonymous function>")
+                }
+            }
         }
     }
 }
@@ -46,7 +54,11 @@ impl Value {
         Value::Null
     }
 
-    pub fn function(arguments: Vec<Ident>, body: Vec<Statement>) -> Self {
-        Value::Function { arguments, body }
+    pub fn function(ident: Option<Ident>, params: Vec<Ident>, body: BlockStatement) -> Self {
+        Value::Function {
+            ident,
+            params,
+            body,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use lexer::lexer::{Lexer, Token};
+use lexer::{lexer::Lexer, token::Token};
 
 use crate::{
     expression::Expression, ident::Ident, operator::Operator, statements::statement::Statement,
@@ -52,13 +52,9 @@ impl Parser {
     }
 
     /**
-     * functionDecl -> "function" function ;
-     * function -> IDENTIFIER "(" parameters? ")" block ;
-     * parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
+     * function -> "(" parameters? ")" block ;
      */
-    fn function_decl(&mut self, _fn_type: FunctionType) -> Statement {
-        let name = self.parse_ident();
-
+    fn function(&mut self) -> Expression {
         self.expect(Token::Lparen, "Expected a left parenthesis");
 
         let mut params = Vec::new();
@@ -80,10 +76,29 @@ impl Parser {
         self.expect(Token::Rparen, "Expected a right parenthesis");
         self.expect(Token::LSquirly, "Expected a left brace");
 
-        let body = self.block_statement();
+        let body = if let Statement::Block(block) = self.block_statement() {
+            block
+        } else {
+            panic!("Expected a block statement");
+        };
 
-        if let Statement::Block(block) = body {
-            return Statement::function(name, params, block);
+        return Expression::literal(Value::function(None, params, body));
+    }
+
+    /**
+     * functionDecl -> "function" IDENTIFIER function ;
+     * parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
+     */
+    fn function_decl(&mut self, _fn_type: FunctionType) -> Statement {
+        let ident = self.parse_ident();
+
+        if let Expression::Literal(Value::Function {
+            ident: _,
+            params,
+            body,
+        }) = self.function()
+        {
+            return Statement::function(ident, params, body);
         }
 
         panic!("Expected a block statement");
@@ -491,6 +506,10 @@ impl Parser {
      * expression -> assignment ;
      */
     fn expression(&mut self) -> Expression {
+        if self.lexer.match_token_and_consume(Token::Function) {
+            return self.function();
+        }
+
         return self.assignment();
     }
 
