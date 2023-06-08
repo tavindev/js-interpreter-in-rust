@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{functions::js_function::JsFunction, value::Value};
 
-use parser::value::Value as ParserValue;
+use parser::value::ParserValue;
 
 use super::environment::Environment;
 use parser::{

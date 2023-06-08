@@ -3,26 +3,26 @@ use core::fmt;
 use crate::{ident::Ident, statements::block::BlockStatement};
 
 #[derive(Clone, PartialEq)]
-pub enum Value {
+pub enum ParserValue {
+    String(String),
+    Number(String),
+    Bool(bool),
+    Null,
     Function {
         ident: Option<Ident>,
         params: Vec<Ident>,
         body: BlockStatement,
     },
-    String(String),
-    Number(String),
-    Bool(bool),
-    Null,
 }
 
-impl fmt::Debug for Value {
+impl fmt::Debug for ParserValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::String(string) => write!(f, "{}", string),
-            Value::Number(number) => write!(f, "{}", number),
-            Value::Bool(bool) => write!(f, "{}", bool),
-            Value::Null => write!(f, "null"),
-            Value::Function {
+            ParserValue::String(string) => write!(f, "{}", string),
+            ParserValue::Number(number) => write!(f, "{}", number),
+            ParserValue::Bool(bool) => write!(f, "{}", bool),
+            ParserValue::Null => write!(f, "null"),
+            ParserValue::Function {
                 ident,
                 params: _,
                 body: _,
@@ -37,25 +37,25 @@ impl fmt::Debug for Value {
     }
 }
 
-impl Value {
+impl ParserValue {
     pub fn number<T: Into<String>>(number: T) -> Self {
-        Value::Number(number.into())
+        ParserValue::Number(number.into())
     }
 
     pub fn string<T: Into<String>>(string: T) -> Self {
-        Value::String(string.into())
+        ParserValue::String(string.into())
     }
 
     pub fn bool(boolean: bool) -> Self {
-        Value::Bool(boolean)
+        ParserValue::Bool(boolean)
     }
 
     pub fn null() -> Self {
-        Value::Null
+        ParserValue::Null
     }
 
     pub fn function(ident: Option<Ident>, params: Vec<Ident>, body: BlockStatement) -> Self {
-        Value::Function {
+        ParserValue::Function {
             ident,
             params,
             body,

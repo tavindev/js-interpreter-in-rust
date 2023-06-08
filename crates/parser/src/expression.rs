@@ -1,10 +1,10 @@
-use crate::{ident::Ident, operator::Operator, value::Value};
+use crate::{ident::Ident, operator::Operator, value::ParserValue};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Variable(Ident),
     Grouping(Box<Expression>),
-    Literal(Value),
+    Literal(ParserValue),
     Assignement {
         ident: Ident,
         value: Box<Expression>,
@@ -29,7 +29,7 @@ impl Expression {
         Expression::Grouping(Box::new(expression))
     }
 
-    pub fn literal(value: Value) -> Expression {
+    pub fn literal(value: ParserValue) -> Expression {
         Expression::Literal(value)
     }
 

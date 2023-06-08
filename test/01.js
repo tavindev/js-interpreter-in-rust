@@ -1,15 +1,11 @@
-function makeCounter() {
-	let i = 0;
-	
-	function count() {
-		i = i + 1;
-		print i; 
-	}
+let a = "global";
+let a = "not global";
+  {
+    function showA() {
+      print a;
+		}
 
-	return count;
+    showA();
+    let a = "block";
+    showA();
 }
-
-let counter = makeCounter();
-counter(); 
-counter();
-print counter;

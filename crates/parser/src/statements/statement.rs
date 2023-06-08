@@ -73,12 +73,15 @@ impl Statement {
 #[cfg(test)]
 mod tests {
 
-    use crate::value::Value;
+    use crate::value::ParserValue;
 
     use super::*;
 
     fn expression() -> Expression {
-        return Expression::assignement(Ident::new("x"), Expression::literal(Value::number("1")));
+        return Expression::assignement(
+            Ident::new("x"),
+            Expression::literal(ParserValue::number("1")),
+        );
     }
 
     #[test]
