@@ -1,7 +1,4 @@
-use std::{
-    cell::{RefCell, RefMut},
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use crate::{functions::js_function::JsFunction, value::Value};
 
@@ -23,16 +20,11 @@ impl Interpreter {
         Interpreter { statements }
     }
 
-    pub fn execute_block(
-        &mut self,
-        block: BlockStatement,
-        environment: &mut Rc<RefCell<Environment>>,
-    ) -> Value {
+    pub fn execute_block(&mut self, block: BlockStatement, environment: &Rc<Environment>) -> Value {
         let mut return_value = Value::Null;
-        let mut environment = environment.borrow_mut();
 
         for statement in block.statements() {
-            if let Some(value) = self.execute(statement, &mut environment) {
+            if let Some(value) = self.execute(statement, &environment) {
                 return_value = value;
                 break;
             }
@@ -41,7 +33,7 @@ impl Interpreter {
         return return_value;
     }
 
-    pub fn evaluate(&mut self, expr: &Expression, environment: &mut RefMut<Environment>) -> Value {
+    pub fn evaluate(&mut self, expr: &Expression, environment: &Rc<Environment>) -> Value {
         match expr {
             Expression::Assignement { ident, value } => {
                 let name = ident.value();
@@ -135,11 +127,7 @@ impl Interpreter {
         }
     }
 
-    fn execute(
-        &mut self,
-        statement: &Statement,
-        environment: &mut RefMut<Environment>,
-    ) -> Option<Value> {
+    fn execute(&mut self, statement: &Statement, environment: &Rc<Environment>) -> Option<Value> {
         match statement {
             Statement::Print(stmt) => {
                 let value = self.evaluate(stmt, environment);
@@ -188,6 +176,7 @@ impl Interpreter {
                     ident.clone(),
                     parameters.clone(),
                     body.clone(),
+                    Rc::clone(&environment),
                 ));
 
                 environment.define(ident.value(), function);
@@ -200,12 +189,11 @@ impl Interpreter {
         None
     }
 
-    pub fn run(&mut self, environment: &mut Rc<RefCell<Environment>>) {
+    pub fn run(&mut self, environment: &Rc<Environment>) {
         let statements = self.statements.clone();
-        let mut environment = environment.borrow_mut();
 
         for statement in statements {
-            self.execute(&statement, &mut environment);
+            self.execute(&statement, &environment);
         }
     }
 }
@@ -217,12 +205,12 @@ mod tests {
     use super::*;
 
     struct EnvironmentHelper {
-        environment: Rc<RefCell<Environment>>,
+        environment: Rc<Environment>,
     }
 
     impl EnvironmentHelper {
         fn get(&self, name: &str) -> Value {
-            self.environment.borrow().get(name).clone()
+            self.environment.get(name).clone()
         }
     }
 
@@ -231,12 +219,12 @@ mod tests {
     }
 
     fn run_interpreter(code: &str) -> RunResult {
-        let mut environment = Rc::new(RefCell::new(Environment::new()));
+        let environment = Rc::new(Environment::new());
         let statements = Parser::new(code).parse();
 
         let mut interpreter = Interpreter::new(statements);
 
-        interpreter.run(&mut environment);
+        interpreter.run(&environment);
 
         RunResult {
             environment: EnvironmentHelper { environment },

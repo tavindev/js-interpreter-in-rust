@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::value::Value;
 
@@ -9,8 +9,8 @@ use super::functions::{
 
 #[derive(Debug)]
 pub struct Environment {
-    enclosing: Option<Rc<RefCell<Environment>>>,
-    values: HashMap<String, Value>,
+    enclosing: Option<Rc<Environment>>,
+    values: RefCell<HashMap<String, Value>>,
 }
 
 impl Clone for Environment {
@@ -26,7 +26,7 @@ impl Environment {
     pub fn new() -> Environment {
         let mut env = Environment {
             enclosing: None,
-            values: HashMap::new(),
+            values: RefCell::new(HashMap::new()),
         };
 
         define_native_functions(&mut env);
@@ -34,51 +34,42 @@ impl Environment {
         env
     }
 
-    pub fn new_enclosing(enclosing: &Rc<RefCell<Environment>>) -> Environment {
+    pub fn new_enclosing(enclosing: &Rc<Environment>) -> Environment {
         Environment {
             enclosing: Some(Rc::clone(enclosing)),
-            values: HashMap::new(),
+            values: RefCell::new(HashMap::new()),
         }
     }
 
-    pub fn define<S: Into<String>>(&mut self, name: S, value: Value) {
+    pub fn define<S: Into<String>>(&self, name: S, value: Value) {
         let name = name.into();
 
-        self.values.insert(name, value);
+        self.values.borrow_mut().insert(name, value);
     }
 
     pub fn get(&self, name: &str) -> Value {
-        if let Some(value) = self.values.get(name) {
+        if let Some(value) = self.values.borrow().get(name) {
             return value.clone();
         }
 
         if let Some(enclosing) = &self.enclosing {
-            let enclosing = enclosing.deref().borrow_mut();
-
             if enclosing.has(name) {
-                let value = enclosing.get(name);
-                return value;
+                return enclosing.get(name);
             }
         }
 
         panic!("Undefined variable: {}", name);
     }
 
-    pub fn assign(&mut self, name: &str, value: Value) {
-        if let Some(_) = self.values.get(name) {
-            self.values.insert(name.to_string(), value);
+    pub fn assign(&self, name: &str, value: Value) {
+        let mut values = self.values.borrow_mut();
+
+        if let Some(_) = values.get(name) {
+            values.insert(name.to_string(), value);
             return;
         }
 
-        // if enclosing.has(name) {
-        //     enclosing.assign(name, value);
-        //     return;
-        // }
-
-        // Assign to enclosing
         if let Some(enclosing) = &self.enclosing {
-            let mut enclosing = enclosing.deref().borrow_mut();
-
             if enclosing.has(name) {
                 enclosing.assign(name, value);
                 return;
@@ -88,13 +79,11 @@ impl Environment {
         panic!("Undefined variable: {}", name);
     }
     pub fn has(&self, name: &str) -> bool {
-        if let Some(_) = self.values.get(name) {
+        if let Some(_) = self.values.borrow().get(name) {
             return true;
         }
 
         if let Some(enclosing) = &self.enclosing {
-            let enclosing = enclosing.borrow();
-
             if enclosing.has(name) {
                 return true;
             }
@@ -103,8 +92,8 @@ impl Environment {
         return false;
     }
 
-    pub fn contents(&self) -> &HashMap<String, Value> {
-        &self.values
+    pub fn contents(&self) -> HashMap<String, Value> {
+        return self.values.borrow().clone();
     }
 }
 
@@ -122,4 +111,23 @@ fn define_native_functions(env: &mut Environment) {
             return random();
         }))),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use crate::value::Value;
+
+    use super::Environment;
+
+    #[test]
+    fn enclosing() {
+        let outer = Rc::new(Environment::new());
+        let inner = Environment::new_enclosing(&outer);
+
+        outer.define("a", Value::Number(1.0));
+
+        assert_eq!(inner.get("a"), Value::Number(1.0));
+    }
 }

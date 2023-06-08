@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use parser::{ident::Ident, statements::block::BlockStatement};
 
@@ -9,7 +9,7 @@ pub struct JsFunction {
     name: String,
     parameters: Vec<Ident>,
     body: BlockStatement,
-    // closure: Rc<RefCell<Environment>>,
+    closure: Rc<Environment>,
 }
 
 #[allow(dead_code)]
@@ -18,11 +18,13 @@ impl JsFunction {
         name: S,
         parameters: Vec<Ident>,
         body: BlockStatement,
+        closure: Rc<Environment>,
     ) -> Box<Self> {
         Box::new(Self {
             name: name.into(),
             parameters,
             body,
+            closure,
         })
     }
 }
@@ -41,16 +43,16 @@ impl Callable for JsFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value {
-        let mut environment = Rc::new(RefCell::new(Environment::new())); // TODO: We should pass by reference
+        let environment = Rc::new(Environment::new_enclosing(&self.closure)); // TODO: We should pass by reference
 
         for (parameter, argument) in self.parameters.iter().zip(arguments.into_iter()) {
             let ident = parameter.clone();
 
-            environment.borrow_mut().define(ident.value(), argument);
+            environment.define(ident.value(), argument);
         }
 
         let body = self.body.clone();
-        let ret = interpreter.execute_block(body, &mut environment);
+        let ret = interpreter.execute_block(body, &environment);
 
         return ret;
     }
