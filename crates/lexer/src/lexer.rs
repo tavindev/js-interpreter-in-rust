@@ -1,6 +1,8 @@
 use crate::token::Token;
 
 pub struct Lexer {
+    line: usize,
+    line_position: usize,
     position: usize,
     read_position: usize,
     ch: u8,
@@ -11,6 +13,8 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: String) -> Lexer {
         let mut lex = Lexer {
+            line: 0,
+            line_position: 0,
             position: 0,
             read_position: 0,
             ch: 0,
@@ -122,10 +126,16 @@ impl Lexer {
                     self.read_char();
                 }
 
+                self.line += 1;
+                self.line_position = 0;
+
                 Token::Newline
             }
             0 => Token::Eof,
-            _ => panic!("Unexpected character: {}", self.ch as char),
+            _ => panic!(
+                "Unexpected character at line {} position {}: {}",
+                self.line, self.line_position, self.ch as char
+            ),
         };
 
         self.read_char();
